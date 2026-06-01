@@ -1,7 +1,12 @@
 "use client";
 import { useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+
+// સુપર્બેઝ ક્લાયન્ટ ડાયરેક્ટલી ક્રિએટ કરો
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -9,7 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const router = useRouter();
-  const supabase = createClientComponentClient();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,7 +29,6 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      // લોગઇન સક્સેસ થાય એટલે સીધા ડેશબોર્ડ પર ધક્કો મારો!
       router.push("/dashboard");
     }
   };
