@@ -75,15 +75,15 @@ export default function DashboardPage() {
                 opacity: item.link === '#' ? 0.6 : 1
               }}
               onMouseEnter={(e) => {
-                if(item.link !== '#') {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.box-shadow = '0 12px 20px rgba(0,0,0,0.05)';
-                }
-              }}
+  if(item.link !== '#') {
+    e.currentTarget.style.transform = 'translateY(-4px)';
+    e.currentTarget.style.boxShadow = '0 12px 20px rgba(0,0,0,0.05)';
+  }
+}}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.box-shadow = 'none';
-              }}
+  e.currentTarget.style.transform = 'translateY(0)';
+  e.currentTarget.style.boxShadow = 'none'; // ✅ આ સાચું છે
+}}
             >
               <div style={{ fontSize: '32px', background: item.color, width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', marginBottom: '16px' }}>
                 {item.icon}
