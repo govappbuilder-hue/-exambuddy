@@ -7,17 +7,17 @@ import { supabase } from '@/lib/supabase';
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         router.push('/login');
       } else {
         setUser(session.user);
+        setLoading(false);
       }
-    };
-    getUser();
+    });
   }, []);
 
   const handleLogout = async () => {
@@ -25,142 +25,44 @@ export default function Dashboard() {
     router.push('/login');
   };
 
-  if (!user) return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      background: '#f8fafc',
-      fontFamily: 'sans-serif'
-    }}>
-      <p style={{ color: '#6b7280' }}>⏳ Loading...</p>
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'sans-serif' }}>
+      <p style={{ color: '#6b7280', fontSize: '18px' }}>⏳ Loading...</p>
     </div>
   );
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif' }}>
-      
-      {/* Navbar */}
-      <div style={{ 
-        background: '#0f172a', 
-        padding: '16px 32px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center' 
-      }}>
-        <h1 style={{ color: 'white', fontSize: '22px', fontWeight: '800', margin: 0 }}>
-          🎓 ExamBuddy
-        </h1>
+      <div style={{ background: '#0f172a', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ color: 'white', fontSize: '22px', fontWeight: '800', margin: 0 }}>🎓 ExamBuddy</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={{ color: '#94a3b8', fontSize: '14px' }}>{user.email}</span>
-          <button 
-            onClick={handleLogout} 
-            style={{ 
-              background: '#ef4444', 
-              color: 'white', 
-              border: 'none', 
-              padding: '8px 20px', 
-              borderRadius: '8px', 
-              cursor: 'pointer', 
-              fontWeight: '600',
-              fontSize: '14px'
-            }}
-          >
+          <span style={{ color: '#94a3b8', fontSize: '14px' }}>{user?.email}</span>
+          <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
             Logout
           </button>
         </div>
       </div>
 
-      {/* Main Content */}
       <div style={{ maxWidth: '900px', margin: '40px auto', padding: '0 20px' }}>
-        
-        {/* Welcome */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', 
-          borderRadius: '16px', 
-          padding: '28px 32px', 
-          marginBottom: '28px',
-          color: 'white'
-        }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', margin: '0 0 6px 0' }}>
-            Welcome back! 👋
-          </h2>
-          <p style={{ margin: 0, opacity: 0.8, fontSize: '15px' }}>
-            Aaje pan study karva tayar cho? Exam crack karva baaki nathi! 💪
-          </p>
+        <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', borderRadius: '16px', padding: '28px 32px', marginBottom: '28px', color: 'white' }}>
+          <h2 style={{ fontSize: '26px', fontWeight: '800', margin: '0 0 6px 0' }}>Welcome back! 👋</h2>
+          <p style={{ margin: 0, opacity: 0.8 }}>Aaje pan study karva tayar cho? Exam crack karva baaki nathi! 💪</p>
         </div>
 
-        {/* Stats Row */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
-          gap: '16px',
-          marginBottom: '28px'
-        }}>
-          {[
-            { icon: '🏆', label: 'Quiz Done', value: '0' },
-            { icon: '✅', label: 'Correct', value: '0%' },
-            { icon: '🔥', label: 'Streak', value: '0 days' },
-            { icon: '⭐', label: 'Plan', value: 'Free' },
-          ].map((stat) => (
-            <div key={stat.label} style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              textAlign: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-            }}>
-              <div style={{ fontSize: '28px', marginBottom: '6px' }}>{stat.icon}</div>
-              <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>{stat.value}</div>
-              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Feature Cards */}
-        <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '16px' }}>
-          Shu karvu che aaje?
-        </h3>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '16px' 
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           {[
             { icon: '📝', title: 'Quiz Practice', desc: 'GPSC/UPSC questions', color: '#dbeafe', border: '#93c5fd' },
             { icon: '🏆', title: 'Mock Test', desc: 'Full exam simulation', color: '#dcfce7', border: '#86efac' },
             { icon: '📚', title: 'Flashcards', desc: 'Quick revision cards', color: '#ede9fe', border: '#c4b5fd' },
             { icon: '📊', title: 'Analytics', desc: 'Track your progress', color: '#fef3c7', border: '#fcd34d' },
-            { icon: '📰', title: 'Current Affairs', desc: 'Daily GK updates', color: '#fce7f3', border: '#f9a8d4' },
-            { icon: '🌐', title: 'Multilingual', desc: 'Gujarati / Hindi', color: '#f0fdf4', border: '#86efac' },
           ].map((item) => (
-            <div key={item.title} style={{
-              background: item.color,
-              border: `2px solid ${item.border}`,
-              borderRadius: '14px',
-              padding: '24px',
-              cursor: 'pointer',
-              transition: 'transform 0.2s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-            >
+            <div key={item.title} style={{ background: item.color, border: `2px solid ${item.border}`, borderRadius: '14px', padding: '24px', cursor: 'pointer' }}>
               <div style={{ fontSize: '34px', marginBottom: '10px' }}>{item.icon}</div>
               <div style={{ fontWeight: '700', fontSize: '16px', color: '#0f172a' }}>{item.title}</div>
               <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>{item.desc}</div>
-              <div style={{ 
-                marginTop: '12px', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                color: '#2563eb' 
-              }}>
-                Coming Soon →
-              </div>
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );
