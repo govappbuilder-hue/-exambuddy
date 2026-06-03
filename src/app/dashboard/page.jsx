@@ -29,7 +29,8 @@ export default function Dashboard() {
     { icon: '🎓', title: 'Exam Buddy', desc: 'Prepare for exams', color: '#dbeafe', border: '#93c5fd', link: '#' },
     { icon: '📝', title: 'Quiz Practice', desc: 'Test your knowledge', color: '#dcfce7', border: '#86efac', link: '/quiz' },
     { icon: '📚', title: 'Study Material', desc: 'Notes and resources', color: '#fee2e2', border: '#fca5a5', link: '#' },
-    { icon: '📊', title: 'Analytics', desc: 'Track your progress', color: '#fef3c7', border: '#fcd34d', link: '/analytics' }, // લિંક અપડેટ થઈ ગઈ
+    { icon: '📊', title: 'Analytics', desc: 'Track your progress', color: '#fef3c7', border: '#fcd34d', link: '/analytics' },
+    { icon: '🏆', title: 'Mock Test', desc: 'Full exam simulation', color: '#dcfce7', border: '#86efac', link: '/mock-test' }, 
   ];
 
   if (!user) return (
