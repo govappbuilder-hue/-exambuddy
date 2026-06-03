@@ -1,68 +1,99 @@
 'use client';
-
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         router.push('/login');
       } else {
-        setUser(session.user);
-        setLoading(false);
+        setUser(user);
       }
-    });
-  }, []);
+      setLoading(false);
+    };
+    checkUser();
+  }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
   };
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <p style={{ color: '#6b7280', fontSize: '18px' }}>⏳ Loading...</p>
-    </div>
-  );
+  // આ આપણું નવું મેનુ લિસ્ટ છે જેમાં Quiz Practice પર ક્લિક કરતાં '/quiz' પેજ ખુલશે
+  const cards = [
+    { icon: '📝', title: 'Quiz Practice', desc: 'GPSC/UPSC questions', color: '#dbeafe', border: '#93c5fd', link: '/quiz' },
+    { icon: '🏆', title: 'Mock Test', desc: 'Full exam simulation', color: '#dcfce7', border: '#86efac', link: '#' },
+    { icon: '📚', title: 'Flashcards', desc: 'Quick revision cards', color: '#ede9fe', border: '#c4b5fd', link: '#' },
+    { icon: '📊', title: 'Analytics', desc: 'Track your progress', color: '#fef3c7', border: '#fcd34d', link: '#' }
+  ];
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'sans-serif' }}>
+        <p style={{ fontSize: '18px', color: '#6b7280' }}>⏳ Loading...</p>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <div style={{ background: '#0f172a', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ color: 'white', fontSize: '22px', fontWeight: '800', margin: 0 }}>🎓 ExamBuddy</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={{ color: '#94a3b8', fontSize: '14px' }}>{user?.email}</span>
-          <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
-            Logout
+    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif', padding: '24px' }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        
+        {/* Header Section */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', background: 'white', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>ExamBuddy 🎓</h1>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Welcome, {user?.email?.split('@')[0]}</p>
+          </div>
+          <button onClick={handleLogout} style={{ padding: '8px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+            Logout 🚪
           </button>
         </div>
-      </div>
 
-      <div style={{ maxWidth: '900px', margin: '40px auto', padding: '0 20px' }}>
-        <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', borderRadius: '16px', padding: '28px 32px', marginBottom: '28px', color: 'white' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', margin: '0 0 6px 0' }}>Welcome back! 👋</h2>
-          <p style={{ margin: 0, opacity: 0.8 }}>Aaje pan study karva tayar cho? Exam crack karva baaki nathi! 💪</p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          {[
-            { icon: '📝', title: 'Quiz Practice', desc: 'GPSC/UPSC questions', color: '#dbeafe', border: '#93c5fd' },
-            { icon: '🏆', title: 'Mock Test', desc: 'Full exam simulation', color: '#dcfce7', border: '#86efac' },
-            { icon: '📚', title: 'Flashcards', desc: 'Quick revision cards', color: '#ede9fe', border: '#c4b5fd' },
-            { icon: '📊', title: 'Analytics', desc: 'Track your progress', color: '#fef3c7', border: '#fcd34d' },
-          ].map((item) => (
-            <div key={item.title} style={{ background: item.color, border: `2px solid ${item.border}`, borderRadius: '14px', padding: '24px', cursor: 'pointer' }}>
-              <div style={{ fontSize: '34px', marginBottom: '10px' }}>{item.icon}</div>
-              <div style={{ fontWeight: '700', fontSize: '16px', color: '#0f172a' }}>{item.title}</div>
-              <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>{item.desc}</div>
+        {/* Features Grid */}
+        <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '20px' }}>તમારો અભ્યાસ શરૂ કરો 👇</h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+          {cards.map((item, index) => (
+            <div 
+              key={index} 
+              onClick={() => item.link !== '#' && router.push(item.link)}
+              style={{ 
+                background: 'white', 
+                border: `2px solid ${item.border}`, 
+                borderRadius: '16px', 
+                padding: '24px', 
+                cursor: item.link !== '#' ? 'pointer' : 'not-allowed', 
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                opacity: item.link === '#' ? 0.6 : 1
+              }}
+              onMouseEnter={(e) => {
+                if(item.link !== '#') {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.box-shadow = '0 12px 20px rgba(0,0,0,0.05)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.box-shadow = 'none';
+              }}
+            >
+              <div style={{ fontSize: '32px', background: item.color, width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', marginBottom: '16px' }}>
+                {item.icon}
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '750', color: '#0f172a', margin: '0 0 8px 0' }}>{item.title}</h3>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>{item.desc}</p>
             </div>
           ))}
         </div>
+
       </div>
     </div>
   );
