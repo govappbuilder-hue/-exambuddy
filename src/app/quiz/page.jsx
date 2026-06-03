@@ -13,16 +13,14 @@ export default function QuizPage() {
   const [timer, setTimer] = useState(30);
   const [answers, setAnswers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Load questions from Supabase
   useEffect(() => {
     const loadQuestions = async () => {
       const { data, error } = await supabase.from('questions').select('*').limit(10);
-      if (error) {
-        console.error(error);
-      } else {
-        setQuestions(data);
-      }
+      if (error) console.error(error);
+      else setQuestions(data);
       setLoading(false);
     };
     loadQuestions();
@@ -47,13 +45,32 @@ export default function QuizPage() {
     setAnswers(prev => [...prev, { question: questions[current].question, selected: opt, correct, isCorrect: opt === correct }]);
   };
 
+  // સ્કોર ડેટાબેઝમાં સેવ કરવાનું ફંક્શન
+  const saveQuizResult = async (finalScore) => {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { error } = await supabase.from('quiz_attempts').insert({
+        user_id: user.id,
+        subject: questions[0]?.subject || 'General',
+        score: finalScore,
+        total_questions: questions.length
+      });
+      if (error) console.error("Error saving score:", error);
+    }
+    setSaving(false);
+    setFinished(true);
+  };
+
   const handleNext = (opt) => {
     if (opt !== null && selected === null) {
       handleAnswer(opt);
       return;
     }
     if (current + 1 >= questions.length) {
-      setFinished(true);
+      // છેલ્લો પ્રશ્ન હોય ત્યારે સ્કોર સેવ કરવાનું ફંક્શન કોલ થશે
+      const finalScore = selected === questions[current].correct_answer ? score + 1 : score;
+      saveQuizResult(finalScore);
     } else {
       setCurrent(c => c + 1);
       setSelected(null);
@@ -76,6 +93,7 @@ export default function QuizPage() {
         <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', borderRadius: '20px', padding: '40px', textAlign: 'center', color: 'white', marginBottom: '24px' }}>
           <div style={{ fontSize: '60px', marginBottom: '16px' }}>{score >= 8 ? '🏆' : score >= 6 ? '🎯' : '💪'}</div>
           <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 8px 0' }}>Quiz Complete!</h2>
+          <p style={{ fontSize: '14px', opacity: 0.8 }}>{saving ? '⚡ Score save thay che...' : '✅ Score saved in database!'}</p>
           <div style={{ fontSize: '48px', fontWeight: '800', margin: '16px 0' }}>{score} / {questions.length}</div>
         </div>
 
