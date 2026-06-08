@@ -9,8 +9,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [msg, setMsg] = useState({ text: '', type: '' });
 
+  // 📧 ઈમેલ-પાસવર્ડ લોગિન લોજિક
   const handleLogin = async () => {
     if (!email || !password) {
       setMsg({ text: 'Email ane password bharjo!', type: 'error' });
@@ -34,6 +36,24 @@ export default function LoginPage() {
     }
   };
 
+  // 🌐 ગૂગલ લોગિન લોજિક
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setMsg({ text: '', type: '' });
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (error) {
+      setMsg({ text: error.message, type: 'error' });
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center',
@@ -49,7 +69,7 @@ export default function LoginPage() {
         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>
           🎓 ExamBuddy
         </h1>
-        <p style={{ color: '#6b7280', marginBottom: '28px', fontSize: '14px' }}>
+        <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '14px' }}>
           Login to continue your preparation
         </p>
 
@@ -63,6 +83,34 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* 🌐 ગૂગલ લોગિન બટન */}
+        <button 
+          onClick={handleGoogleLogin} 
+          disabled={googleLoading || loading} 
+          style={{
+            width: '100%', padding: '12px',
+            background: 'white', color: '#374151', 
+            border: '2px solid #e2e8f0', borderRadius: '8px',
+            fontSize: '15px', fontWeight: '700',
+            cursor: (googleLoading || loading) ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            marginBottom: '20px', transition: 'background 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+        >
+          <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="google" style={{ width: '18px', height: '18px' }} />
+          {googleLoading ? '⏳ Connecting...' : 'Google સાથે લોગિન કરો'}
+        </button>
+
+        {/* ➖ અથવા (OR) લાઇન ➖ */}
+        <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#9ca3af', fontSize: '12px', marginBottom: '20px' }}>
+          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+          <span style={{ padding: '0 10px', fontWeight: '650' }}>અથવા</span>
+          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+        </div>
+
+        {/* 📧 ઈમેલ ઇનપુટ */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
             Email
@@ -75,6 +123,7 @@ export default function LoginPage() {
           />
         </div>
 
+        {/* 🔑 પાસવર્ડ ઇનપુટ */}
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
             Password
@@ -88,12 +137,13 @@ export default function LoginPage() {
           />
         </div>
 
-        <button onClick={handleLogin} disabled={loading} style={{
+        {/* 🚀 મેઈન સબમિટ બટન */}
+        <button onClick={handleLogin} disabled={loading || googleLoading} style={{
           width: '100%', padding: '14px',
-          background: loading ? '#93c5fd' : '#2563eb',
+          background: (loading || googleLoading) ? '#93c5fd' : '#2563eb',
           color: 'white', border: 'none', borderRadius: '8px',
           fontSize: '16px', fontWeight: '700',
-          cursor: loading ? 'not-allowed' : 'pointer'
+          cursor: (loading || googleLoading) ? 'not-allowed' : 'pointer'
         }}>
           {loading ? '⏳ Logging in...' : '🚀 Login'}
         </button>

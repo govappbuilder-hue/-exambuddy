@@ -1,166 +1,148 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+"use client";
+import React, { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function QuizPage() {
+// 🧠 આ મેઈન ક્વિઝનું લોજિક છે
+function QuizContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
+  
+  // હોમ પેજ પરથી સિલેક્ટ કરેલો વિષય વાંચશે (જો કંઈ ન મળે તો બાય-ડિફોલ્ટ 'ગણિત')
+  const subject = searchParams.get('subject') || 'ગણિત';
+
+  const [quizzes, setQuizzes] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(0);
-  const [finished, setFinished] = useState(false);
-  const [timer, setTimer] = useState(30);
-  const [answers, setAnswers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  // Load questions from Supabase
+  // 🔄 સુપાબેઝમાંથી માત્ર સિલેક્ટ કરેલા વિષયના જ પ્રશ્નો લાવશે
   useEffect(() => {
-    const loadQuestions = async () => {
-      const { data, error } = await supabase.from('questions').select('*').limit(10);
-      if (error) console.error(error);
-      else setQuestions(data);
+    async function loadData() {
+      const { data, error } = await supabase
+        .from('government_quizzes')
+        .select('*')
+        .eq('subject', subject);
+        
+      if (!error) setQuizzes(data || []);
       setLoading(false);
-    };
-    loadQuestions();
-  }, []);
-
-  // Timer Countdown
-  useEffect(() => {
-    if (finished || loading || questions.length === 0) return;
-    if (timer === 0) {
-      handleNext(null);
-      return;
     }
-    const t = setTimeout(() => setTimer(t => t - 1), 1000);
-    return () => clearTimeout(t);
-  }, [timer, finished, loading, questions]);
+    loadData();
+  }, [subject]);
 
-  const handleAnswer = (opt) => {
-    if (selected !== null) return;
-    setSelected(opt);
-    const correct = questions[current].correct_answer;
-    if (opt === correct) setScore(s => s + 1);
-    setAnswers(prev => [...prev, { question: questions[current].question, selected: opt, correct, isCorrect: opt === correct }]);
-  };
-
-  // સ્કોર ડેટાબેઝમાં સેવ કરવાનું ફંક્શન
-  const saveQuizResult = async (finalScore) => {
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { error } = await supabase.from('quiz_attempts').insert({
-        user_id: user.id,
-        subject: questions[0]?.subject || 'General',
-        score: finalScore,
-        total_questions: questions.length
-      });
-      if (error) console.error("Error saving score:", error);
-    }
-    setSaving(false);
-    setFinished(true);
-  };
-
-  const handleNext = (opt) => {
-    if (opt !== null && selected === null) {
-      handleAnswer(opt);
-      return;
-    }
-    if (current + 1 >= questions.length) {
-      // છેલ્લો પ્રશ્ન હોય ત્યારે સ્કોર સેવ કરવાનું ફંક્શન કોલ થશે
-      const finalScore = selected === questions[current].correct_answer ? score + 1 : score;
-      saveQuizResult(finalScore);
-    } else {
-      setCurrent(c => c + 1);
-      setSelected(null);
-      setTimer(30);
-    }
-  };
-
-  const optionLabels = ['A', 'B', 'C', 'D'];
-  const optionValues = (q) => [q.option_a, q.option_b, q.option_c, q.option_d];
-
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <p style={{ fontSize: '20px', color: '#6b7280' }}>⏳ Questions load thay che...</p>
-    </div>
-  );
-
-  if (finished) return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif', padding: '20px' }}>
-      <div style={{ maxWidth: '600px', margin: '40px auto' }}>
-        <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', borderRadius: '20px', padding: '40px', textAlign: 'center', color: 'white', marginBottom: '24px' }}>
-          <div style={{ fontSize: '60px', marginBottom: '16px' }}>{score >= 8 ? '🏆' : score >= 6 ? '🎯' : '💪'}</div>
-          <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 8px 0' }}>Quiz Complete!</h2>
-          <p style={{ fontSize: '14px', opacity: 0.8 }}>{saving ? '⚡ Score save thay che...' : '✅ Score saved in database!'}</p>
-          <div style={{ fontSize: '48px', fontWeight: '800', margin: '16px 0' }}>{score} / {questions.length}</div>
-        </div>
-
-        <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '16px' }}>📋 Review</h3>
-        {answers.map((a, i) => (
-          <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '16px', marginBottom: '12px', border: `2px solid ${a.isCorrect ? '#86efac' : '#fca5a5'}` }}>
-            <p style={{ fontWeight: '600', color: '#0f172a', margin: '0 0 8px 0' }}>{i + 1}. {a.question}</p>
-            <p style={{ margin: '4px 0', fontSize: '13px', color: a.isCorrect ? '#16a34a' : '#dc2626' }}>{a.isCorrect ? '✅' : '❌'} Taro jawab: Option {a.selected}</p>
-            {!a.isCorrect && <p style={{ margin: '4px 0', fontSize: '13px', color: '#16a34a' }}>✅ Sahi jawab: Option {a.correct}</p>}
-          </div>
-        ))}
-
-        <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-          <button onClick={() => { setCurrent(0); setScore(0); setFinished(false); setSelected(null); setTimer(30); setAnswers([]); }} style={{ flex: 1, padding: '14px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}>🔄 Again Play</button>
-          <button onClick={() => router.push('/dashboard')} style={{ flex: 1, padding: '14px', background: '#f1f5f9', color: '#0f172a', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}>🏠 Dashboard</button>
+  if (loading) return <div className="text-center p-10 font-bold text-black animate-pulse">પેપર સેટ લોડ થઈ રહ્યો છે... ⏳</div>;
+  
+  if (quizzes.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-black p-6">
+        <div className="text-center max-w-sm bg-white p-6 rounded-3xl shadow-md border border-gray-100">
+          <span className="text-4xl">⚠️</span>
+          <h3 className="text-xl font-bold mt-4">પ્રશ્નો મળ્યા નથી ભાઈ!</h3>
+          <p className="text-gray-400 text-sm mt-2">ડેટાબેઝમાં હજી સુધી "{subject}" વિષયના પ્રશ્નો નથી ઉમેરાયા.</p>
+          <button onClick={() => router.push('/')} className="w-full mt-6 bg-black text-white py-3 rounded-xl font-bold">પાછા હોમ પેજ પર જાઓ</button>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  if (questions.length === 0) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p>No questions found!</p></div>;
+  const current = quizzes[currentIndex];
+  const correctOpt = current?.correct_option ? current.correct_option.toLowerCase() : 'a';
 
-  const q = questions[current];
-  const opts = optionValues(q);
-  const timerColor = timer <= 10 ? '#ef4444' : timer <= 20 ? '#f59e0b' : '#16a34a';
+  // 🎯 ક્લિક લોજિક (સાચું પડે તો લીલું, ખોટું પડે તો લાલ અને હિસ્ટ્રી સેવ)
+  const handleSelect = async (opt) => {
+    if (isAnswered) return;
+    setSelectedOption(opt);
+    setIsAnswered(true);
+    
+    let isCorrect = opt === correctOpt;
+    if (isCorrect) {
+      setScore(score + 1);
+    }
+
+    // 📊 પ્રોગ્રેસ ચાર્ટ માટે ડેટાબેઝમાં એન્ટ્રી પાડવી
+    try {
+      await supabase.from('quiz_history').insert([
+        {
+          quiz_type: subject,
+          score: isCorrect ? 1 : 0,
+          total_questions: 1
+        }
+      ]);
+    } catch (err) {
+      console.error("History save error:", err);
+    }
+  };
+
+  const handleNext = () => {
+    setSelectedOption(null);
+    setIsAnswered(false);
+    setCurrentIndex(currentIndex + 1);
+  };
+
+  // 🏆 રિઝલ્ટ કાર્ડ
+  if (currentIndex >= quizzes.length) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 text-black">
+        <div className="bg-white p-8 rounded-3xl shadow-xl text-center max-w-sm w-full border border-gray-100">
+          <span className="text-5xl">🏆</span>
+          <h2 className="text-2xl font-black mt-4 mb-2">ટેસ્ટ પૂરી થઈ ગઈ!</h2>
+          <p className="text-sm text-gray-400 mb-4">વિષય: {subject}</p>
+          <div className="text-5xl font-black text-blue-600 mb-2">{score} / {quizzes.length}</div>
+          <button onClick={() => router.push('/')} className="w-full bg-black text-white py-3 rounded-xl font-bold">બીજી ટેસ્ટ આપો ➔</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif', padding: '20px' }}>
-      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', fontSize: '14px', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>← Dashboard</button>
-          <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{current + 1} / {questions.length}</span>
-          <div style={{ background: timerColor, color: 'white', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>{timer}</div>
+    <div className="min-h-screen bg-gray-50 p-6 text-black flex flex-col items-center">
+      <div className="w-full max-w-2xl bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
+        <div className="flex justify-between text-xs font-black text-gray-400 mb-4 uppercase tracking-widest border-b pb-3">
+          <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">{current.subject}</span>
+          <span>{currentIndex + 1} / {quizzes.length}</span>
         </div>
-
-        <div style={{ background: '#e2e8f0', borderRadius: '99px', height: '6px', marginBottom: '24px' }}>
-          <div style={{ background: '#2563eb', height: '100%', borderRadius: '99px', width: `${((current + 1) / questions.length) * 100}%`, transition: 'width 0.3s' }} />
+        
+        <h2 className="text-xl font-extrabold mb-6 leading-relaxed text-gray-900">{current.question}</h2>
+        
+        <div className="space-y-3">
+          {['a', 'b', 'c', 'd'].map((opt) => {
+            const isCorrect = opt === correctOpt;
+            const isSelected = selectedOption === opt;
+            let colors = "border-gray-200 text-gray-700 hover:bg-gray-50";
+            
+            if (isAnswered) {
+              if (isCorrect) colors = "bg-green-50 border-green-500 text-green-700 font-bold";
+              else if (isSelected) colors = "bg-red-50 border-red-500 text-red-700 font-bold";
+              else colors = "opacity-50 border-gray-100 text-gray-400";
+            }
+            
+            return (
+              <button key={opt} disabled={isAnswered} onClick={() => handleSelect(opt)} className={`w-full p-4 text-left border rounded-2xl transition-all flex items-center space-x-3 ${colors}`}>
+                <span className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-black border uppercase ${isSelected ? 'bg-black text-white' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>{opt}</span>
+                <span className="flex-1">{current[opt]}</span>
+              </button>
+            );
+          })}
         </div>
-
-        <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', marginBottom: '20px' }}>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', textTransform: 'uppercase', marginBottom: '12px' }}>{q.subject} • {q.language}</div>
-          <p style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: 0 }}>{q.question}</p>
-        </div>
-
-        {opts.map((opt, i) => {
-          const label = optionLabels[i];
-          const isSelected = selected === label;
-          const isCorrect = q.correct_answer === label;
-          let bg = 'white'; let border = '#e2e8f0'; let color = '#0f172a';
-          if (selected !== null) {
-            if (isCorrect) { bg = '#dcfce7'; border = '#86efac'; color = '#16a34a'; }
-            else if (isSelected) { bg = '#fee2e2'; border = '#fca5a5'; color = '#dc2626'; }
-          }
-          return (
-            <button key={i} onClick={() => handleAnswer(label)} disabled={selected !== null} style={{ width: '100%', padding: '16px', marginBottom: '12px', background: bg, border: `2px solid ${border}`, borderRadius: '12px', cursor: selected !== null ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <span style={{ background: selected !== null ? border : '#f1f5f9', color, borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>{label}</span>
-              <span style={{ fontSize: '15px', fontWeight: '600', color }}>{opt}</span>
-            </button>
-          );
-        })}
-
-        {selected !== null && (
-          <button onClick={() => handleNext(null)} style={{ width: '100%', padding: '16px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-            {current + 1 >= questions.length ? '🏁 Results Juo' : 'Aaglu Sawal →'}
-          </button>
+        
+        {isAnswered && (
+          <div className="mt-6 p-4 bg-amber-50/70 border border-amber-200 rounded-2xl">
+            <p className="text-sm text-amber-900 font-medium"><strong>💡 સમજૂતી:</strong> {current.explanation || 'આ પ્રશ્નની કોઈ સમજૂતી ઉપલબ્ધ નથી.'}</p>
+            <button onClick={handleNext} className="w-full mt-4 bg-gray-900 hover:bg-gray-800 text-white py-3.5 rounded-xl font-bold transition shadow-md">આગલો પ્રશ્ન ➔</button>
+          </div>
         )}
       </div>
     </div>
+  );
+}
+
+// 🛡️ આ મોસ્ટ ઈમ્પોર્ટન્ટ સ્ટેપ છે: યુઝર સર્ચ પેરામ્સને Suspense બાઉન્ડ્રીમાં રેપ કર્યું જેથી પેલી બ્રાઉઝર એરર સોલ્વ થઈ જાય!
+export default function QuizPage() {
+  return (
+    <Suspense fallback={<div className="text-center p-10 font-bold text-black animate-pulse">પેજ લોડ થઈ રહ્યું છે... ⏳</div>}>
+      <QuizContent />
+    </Suspense>
   );
 }
