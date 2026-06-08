@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-backend-js'; // અથવા તારું સર્વર-સાઇડ સુપાબેઝ ક્લાયન્ટ
+import { createClient } from '@supabase/supabase-js'; // 👈 અહીં '@supabase/supabase-js' કરી નાખવું
 
 // સુપાબેઝ એડમિન કનેક્શન (સર્વર સાઇડ માટે)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // એનવાયરમેન્ટ ફાઇલમાં આ કી હોવી જરૂરી છે ભાઈ
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
 export async function GET(request) {
