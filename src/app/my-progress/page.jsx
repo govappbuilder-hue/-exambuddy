@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+);
 
 export default function MyProgressPage() {
   const [history, setHistory] = useState([]);
@@ -27,79 +32,59 @@ export default function MyProgressPage() {
   const accuracy = totalQ > 0 ? Math.round((totalCorrect / totalQ) * 100) : 0;
 
   if (loading) return (
-    <div className="p-10 text-center font-bold text-blue-600 text-xl">
+    <div style={{padding:'40px', textAlign:'center', fontSize:'20px', color:'#2563eb', fontWeight:'700'}}>
       ⏳ ડેટા લોડ થઈ રહ્યો છે...
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-black text-gray-800">📊 મારો પ્રોગ્રેસ</h1>
+    <div style={{minHeight:'100vh', background:'#f8fafc', padding:'24px', fontFamily:'system-ui'}}>
+      <div style={{maxWidth:'600px', margin:'0 auto'}}>
+        <h1 style={{fontSize:'24px', fontWeight:'900', color:'#0f172a', marginBottom:'24px'}}>📊 મારો પ્રોગ્રેસ</h1>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-2xl shadow text-center">
-            <p className="text-3xl font-black text-blue-600">{totalTests}</p>
-            <p className="text-xs text-gray-400 font-bold mt-1">કુલ ટેસ્ટ</p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl shadow text-center">
-            <p className="text-3xl font-black text-green-600">{totalCorrect}</p>
-            <p className="text-xs text-gray-400 font-bold mt-1">સાચા જવાબ</p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl shadow text-center">
-            <p className="text-3xl font-black text-purple-600">{accuracy}%</p>
-            <p className="text-xs text-gray-400 font-bold mt-1">એક્યુરેસી</p>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="bg-white p-6 rounded-2xl shadow">
-          <div className="flex justify-between text-sm font-bold text-gray-500 mb-2">
-            <span>સાચા જવાબ</span>
-            <span>{totalCorrect} / {totalQ}</span>
-          </div>
-          <div className="w-full bg-gray-100 h-4 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-700"
-              style={{ width: `${accuracy}%` }}
-            />
-          </div>
-        </div>
-
-        {/* History List */}
-        <div className="bg-white p-6 rounded-2xl shadow">
-          <h3 className="font-black text-gray-800 mb-4">📋 ટેસ્ટ હિસ્ટ્રી</h3>
-          {history.length === 0 ? (
-            <p className="text-gray-400 text-center py-4">
-              હજુ કોઈ ટેસ્ટ આપી નથી! 🎯
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {history.map((item) => {
-                const pct = Math.round((item.score / item.total_questions) * 100);
-                return (
-                  <div key={item.id}
-                    className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    <div>
-                      <p className="font-bold text-gray-800">🎯 {item.topic}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(item.created_at).toLocaleDateString("gu-IN")}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`font-black px-3 py-1 rounded-xl text-sm ${
-                        pct >= 70 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-                      }`}>
-                        {item.score}/{item.total_questions}
-                      </span>
-                      <p className="text-xs text-gray-400 mt-1">{pct}%</p>
-                    </div>
-                  </div>
-                );
-              })}
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'16px', marginBottom:'24px'}}>
+          {[
+            {val: totalTests, label:'કુલ ટેસ્ટ', color:'#2563eb'},
+            {val: totalCorrect, label:'સાચા જવાબ', color:'#16a34a'},
+            {val: accuracy+'%', label:'એક્યુરેસી', color:'#7c3aed'},
+          ].map((s,i) => (
+            <div key={i} style={{background:'white', padding:'20px', borderRadius:'16px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', textAlign:'center'}}>
+              <p style={{fontSize:'28px', fontWeight:'900', color:s.color, margin:0}}>{s.val}</p>
+              <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'700', margin:'4px 0 0'}}>{s.label}</p>
             </div>
-          )}
+          ))}
+        </div>
+
+        <div style={{background:'white', padding:'24px', borderRadius:'16px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', marginBottom:'24px'}}>
+          <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', fontWeight:'700', color:'#64748b', marginBottom:'8px'}}>
+            <span>સાચા જવાબ</span><span>{totalCorrect} / {totalQ}</span>
+          </div>
+          <div style={{background:'#f1f5f9', borderRadius:'99px', height:'16px', overflow:'hidden'}}>
+            <div style={{background:'linear-gradient(90deg, #2563eb, #16a34a)', height:'100%', width:`${accuracy}%`, borderRadius:'99px', transition:'width 0.7s'}}/>
+          </div>
+        </div>
+
+        <div style={{background:'white', padding:'24px', borderRadius:'16px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
+          <h3 style={{fontSize:'16px', fontWeight:'900', color:'#0f172a', marginBottom:'16px'}}>📋 ટેસ્ટ હિસ્ટ્રી</h3>
+          {history.length === 0 ? (
+            <p style={{color:'#94a3b8', textAlign:'center', padding:'20px'}}>હજુ કોઈ ટેસ્ટ આપી નથી! 🎯</p>
+          ) : history.map((item) => {
+            const pct = Math.round((item.score / item.total_questions) * 100);
+            return (
+              <div key={item.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px', background:'#f8fafc', borderRadius:'12px', border:'1px solid #e2e8f0', marginBottom:'10px'}}>
+                <div>
+                  <p style={{fontWeight:'700', color:'#0f172a', margin:0}}>🎯 {item.topic}</p>
+                  <p style={{fontSize:'12px', color:'#94a3b8', margin:'2px 0 0'}}>{new Date(item.created_at).toLocaleDateString('gu-IN')}</p>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <span style={{background: pct>=70?'#dcfce7':'#fee2e2', color:pct>=70?'#16a34a':'#dc2626', padding:'6px 12px', borderRadius:'10px', fontWeight:'800', fontSize:'13px'}}>
+                    {item.score}/{item.total_questions}
+                  </span>
+                  <p style={{fontSize:'12px', color:'#94a3b8', margin:'4px 0 0'}}>{pct}%</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
