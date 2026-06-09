@@ -1,8 +1,12 @@
 'use client';
-
 import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+);
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -10,132 +14,54 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [msg, setMsg] = useState('');
 
   const handleRegister = async () => {
-    if (!email || !password || !name) {
-      setError('Badha fields bharjo!');
-      return;
-    }
-    if (password.length < 6) {
-      setError('Password minimum 6 characters joiye!');
-      return;
-    }
+    if (!email || !password || !name) { setMsg('❌ બધા ફીલ્ડ ભरो!'); return; }
     setLoading(true);
-    setError('');
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password,
-        options: {
-          data: { full_name: name }
-        }
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        setMessage('✅ Account create thayo! Email verify karo pachi login karo.');
-      }
-    } catch (err) {
-      setError('Connection error. Internet check karo.');
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+    setLoading(false);
+    if (error) setMsg('❌ ' + error.message);
+    else { setMsg('✅ Account બની ગયો! Email verify કરો.'); }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
-      fontFamily: 'sans-serif',
-      padding: '20px'
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '40px',
-        width: '100%',
-        maxWidth: '400px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-      }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>
-          🎓 ExamBuddy
-        </h1>
-        <p style={{ color: '#6b7280', marginBottom: '28px', fontSize: '14px' }}>
-          Create your free account
-        </p>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
+      <div style={{ background: 'white', borderRadius: '24px', padding: '40px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px rgba(0,0,0,0.2)' }}>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ fontSize: '48px' }}>🎓</div>
+          <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '10px 0 5px' }}>ExamBuddy</h1>
+          <p style={{ color: '#64748b', fontSize: '14px' }}>નવો Account બनावो!</p>
+        </div>
 
-        {error && (
-          <div style={{ background: '#fee2e2', color: '#dc2626', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
-            ❌ {error}
-          </div>
-        )}
-
-        {message && (
-          <div style={{ background: '#dcfce7', color: '#16a34a', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
-            {message}
-            <br />
-            <a href="/login" style={{ color: '#16a34a', fontWeight: '700' }}>→ Login page par jao</a>
-          </div>
-        )}
+        {msg && <div style={{ background: msg.includes('✅') ? '#dcfce7' : '#fee2e2', color: msg.includes('✅') ? '#166534' : '#dc2626', padding: '12px', borderRadius: '10px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' }}>{msg}</div>}
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-            Full Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Yuvraj Chaudhari"
-            style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-          />
+          <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '14px' }}>👤 પૂरु નામ</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="તારું નામ"
+            style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-          />
+          <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '14px' }}>📧 Email</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com"
+            style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="minimum 6 characters"
-            onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-            style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-          />
+          <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '14px' }}>🔑 Password</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
+            style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
-        <button
-          onClick={handleRegister}
-          disabled={loading || !!message}
-          style={{ width: '100%', padding: '14px', background: loading ? '#93c5fd' : '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer' }}
-        >
-          {loading ? '⏳ Creating...' : '🚀 Create Account'}
+        <button onClick={handleRegister} disabled={loading}
+          style={{ width: '100%', padding: '14px', background: loading ? '#94a3b8' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: loading ? 'not-allowed' : 'pointer' }}>
+          {loading ? '⏳ Account બनी રહ્યો છે...' : '✨ Register'}
         </button>
 
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#6b7280' }}>
-          Account che?{' '}
-          <a href="/login" style={{ color: '#2563eb', fontWeight: '600' }}>Login here</a>
+        <p style={{ textAlign: 'center', marginTop: '20px', color: '#64748b', fontSize: '14px' }}>
+          Account છे?{' '}
+          <span onClick={() => router.push('/login')} style={{ color: '#667eea', fontWeight: '700', cursor: 'pointer' }}>Login કરો</span>
         </p>
       </div>
     </div>
