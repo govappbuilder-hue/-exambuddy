@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function MyProgressPage() {
   const [history, setHistory] = useState([]);
@@ -8,69 +8,99 @@ export default function MyProgressPage() {
 
   useEffect(() => {
     async function fetchHistory() {
-      const { data } = await supabase.from('quiz_history').select('*').order('created_at', { ascending: false });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data } = await supabase
+        .from("user_scores")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
       setHistory(data || []);
       setLoading(false);
     }
     fetchHistory();
   }, []);
 
-  if (loading) return <div className="p-10 text-center text-black font-bold">ડેટા લોડ થઈ રહ્યો છે...</div>;
-
   const totalTests = history.length;
-  const totalCorrect = history.reduce((acc, curr) => acc + (curr.score || 0), 0);
-  const totalQuestions = history.reduce((acc, curr) => acc + (curr.total_questions || 1), 0);
-  const accuracyRate = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+  const totalCorrect = history.reduce((a, c) => a + (c.score || 0), 0);
+  const totalQ = history.reduce((a, c) => a + (c.total_questions || 1), 0);
+  const accuracy = totalQ > 0 ? Math.round((totalCorrect / totalQ) * 100) : 0;
+
+  if (loading) return (
+    <div className="p-10 text-center font-bold text-blue-600 text-xl">
+      ⏳ ડેટા લોડ થઈ રહ્યો છે...
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 text-black p-6 flex flex-col items-center">
-      <div className="w-full max-w-2xl space-y-6">
-        
-        {/* 📊 વિઝ્યુઅલ પ્રોગ્રેસ બાર ચાર્ટ */}
-        <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-          <h3 className="text-xl font-black mb-4 flex items-center space-x-2">
-            <span>📊</span> <span>તમારો સ્કોર પ્રોગ્રેસ ચાર્ટ</span>
-          </h3>
-          <div className="grid grid-cols-2 gap-4 mb-4 text-center">
-            <div className="bg-blue-50 p-4 rounded-2xl">
-              <span className="block text-2xl font-black text-blue-600">{totalTests}</span>
-              <span className="text-xs text-gray-400 font-bold">કુલ ટેસ્ટ આપી</span>
-            </div>
-            <div className="bg-emerald-50 p-4 rounded-2xl">
-              <span className="block text-2xl font-black text-emerald-600">{accuracyRate}%</span>
-              <span className="text-xs text-gray-400 font-bold">એક્યુરેસી રેટ</span>
-            </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <h1 className="text-2xl font-black text-gray-800">📊 મારો પ્રોગ્રેસ</h1>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white p-4 rounded-2xl shadow text-center">
+            <p className="text-3xl font-black text-blue-600">{totalTests}</p>
+            <p className="text-xs text-gray-400 font-bold mt-1">કુલ ટેસ્ટ</p>
           </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-bold text-gray-400">
-              <span>સાચા જવાબોની ટકાવારી</span>
-              <span>{totalCorrect} / {totalQuestions}</span>
-            </div>
-            <div className="w-full bg-gray-100 h-5 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full transition-all" style={{ width: `${accuracyRate}%` }}></div>
-            </div>
+          <div className="bg-white p-4 rounded-2xl shadow text-center">
+            <p className="text-3xl font-black text-green-600">{totalCorrect}</p>
+            <p className="text-xs text-gray-400 font-bold mt-1">સાચા જવાબ</p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl shadow text-center">
+            <p className="text-3xl font-black text-purple-600">{accuracy}%</p>
+            <p className="text-xs text-gray-400 font-bold mt-1">એક્યુરેસી</p>
           </div>
         </div>
 
-        {/* 📋 હિસ્ટ્રી લિસ્ટ */}
-        <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-black mb-4">📋 ટેસ્ટ હિસ્ટ્રી</h3>
-          <div className="space-y-3">
-            {history.map((item, index) => (
-              <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                <div>
-                  <h4 className="font-bold text-sm text-gray-800">{item.quiz_type || 'AI Quiz'}</h4>
-                  <p className="text-xs text-gray-400 mt-0.5">{new Date(item.created_at).toLocaleDateString()}</p>
-                </div>
-                <span className="bg-emerald-100 text-emerald-800 font-black px-3 py-1.5 rounded-xl text-xs">
-                  {item.score} / {item.total_questions}
-                </span>
-              </div>
-            ))}
+        {/* Progress Bar */}
+        <div className="bg-white p-6 rounded-2xl shadow">
+          <div className="flex justify-between text-sm font-bold text-gray-500 mb-2">
+            <span>સાચા જવાબ</span>
+            <span>{totalCorrect} / {totalQ}</span>
+          </div>
+          <div className="w-full bg-gray-100 h-4 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-700"
+              style={{ width: `${accuracy}%` }}
+            />
           </div>
         </div>
 
+        {/* History List */}
+        <div className="bg-white p-6 rounded-2xl shadow">
+          <h3 className="font-black text-gray-800 mb-4">📋 ટેસ્ટ હિસ્ટ્રી</h3>
+          {history.length === 0 ? (
+            <p className="text-gray-400 text-center py-4">
+              હજુ કોઈ ટેસ્ટ આપી નથી! 🎯
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {history.map((item) => {
+                const pct = Math.round((item.score / item.total_questions) * 100);
+                return (
+                  <div key={item.id}
+                    className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div>
+                      <p className="font-bold text-gray-800">🎯 {item.topic}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(item.created_at).toLocaleDateString("gu-IN")}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-black px-3 py-1 rounded-xl text-sm ${
+                        pct >= 70 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+                      }`}>
+                        {item.score}/{item.total_questions}
+                      </span>
+                      <p className="text-xs text-gray-400 mt-1">{pct}%</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
