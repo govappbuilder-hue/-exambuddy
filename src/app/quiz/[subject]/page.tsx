@@ -9,23 +9,24 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
 
-const SUBJECT_NAMES: Record<string, string> = {
-  maths: '🔢 ગણિત',
-  constitution: '📜 બંધારણ',
-  polity: '📜 બંધારણ',
-  history: '🏛️ ઇતિહાસ',
-  geography: '🌍 ભૂગોળ',
-  science: '🔬 વિજ્ઞાન',
-  gujarati: '✍️ ગુજરાતી',
-  computer: '💻 કમ્પ્યૂટર',
-  reasoning: '🧩 રીઝનિંગ',
-  english: '🔤 English',
-  law: '⚖️ કાયદો',
-  gk: '💡 સામાન્ય જ્ઞાન',
-  current_affairs: '📰 કરંટ અફેર્સ',
-  heritage: '🏛️ સાંસ્કૃતિક વારસો',
-  economics: '📈 અર્થશાસ્ત્ર',
-  pub_ad: '🏢 જાહેર વહીવટ'
+// તારા સુપાબેઝ ડેટાબેઝમાં જે નામ છે તેની સાથે લિંકનું મેપિંગ
+const SUBJECT_MAP: Record<string, { dbName: string; displayName: string }> = {
+  gujarati_sahitya: { dbName: 'ગુજરાતી સાહિત્ય', displayName: '✍️ ગુજરાતી સાહિત્ય' },
+  gujarati_vyakran: { dbName: 'ગુજરાતી વ્યાકરણ', displayName: '📝 ગુજરાતી વ્યાકરણ' },
+  maths: { dbName: 'ગણિત', displayName: '🔢 ગણિત' },
+  constitution: { dbName: 'બંધારણ', displayName: '📜 બંધારણ' },
+  history: { dbName: 'ઇતિહાસ', displayName: '🏛️ ઇતિહાસ' },
+  geography: { dbName: 'ભૂગોળ', displayName: '🌍 ભૂગોળ' },
+  science: { dbName: 'વિજ્ઞાન', displayName: '🔬 વિજ્ઞાન' },
+  computer: { dbName: 'કમ્પ્યૂટર', displayName: '💻 કમ્પ્યૂટર' },
+  reasoning: { dbName: 'રીઝનિંગ', displayName: '🧩 રીઝનિંગ' },
+  english: { dbName: 'English', displayName: '🔤 English' },
+  law: { dbName: 'કાયદો', displayName: '⚖️ કાયદો' },
+  gk: { dbName: 'સામાન્ય જ્ઞાન', displayName: '💡 સામાન્ય જ્ઞાન' },
+  current_affairs: { dbName: 'કરંટ અફેર્સ', displayName: '📰 કરંટ અફેર્સ' },
+  heritage: { dbName: 'સાંસ્કૃતિક વારસો', displayName: '🏛️ સાંસ્કૃતિક વારસો' },
+  economics: { dbName: 'અર્થશાસ્ત્ર', displayName: '📈 અર્થશાસ્ત્ર' },
+  pub_ad: { dbName: 'જાહેર વહીવટ', displayName: '🏢 જાહેર વહીવટ' }
 };
 
 interface Question {
@@ -41,10 +42,18 @@ interface Question {
 
 type ScreenType = 'setup' | 'quiz' | 'result';
 
-export default function QuizPage({ params }: { params: Promise<{ subject: string }> }) {
+interface PageProps {
+  params: Promise<{ subject: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default function QuizPage({ params }: PageProps) {
   const router = useRouter();
-  const unfoldedParams = use(params);
-  const subject = unfoldedParams?.subject || "";
+  const resolvedParams = use(params);
+  const routeSubject = resolvedParams?.subject || "";
+
+  // જો મેપિંગ મળે તો ડેટાબેઝનું સાચું નામ લેશે, નહીંતર રાઉટનું નામ રાખશે
+  const subjectConfig = SUBJECT_MAP[routeSubject] || { dbName: routeSubject, displayName: routeSubject };
 
   const [screen, setScreen] = useState<ScreenType>('setup');
   const [totalMarks, setTotalMarks] = useState(50);
@@ -59,19 +68,19 @@ export default function QuizPage({ params }: { params: Promise<{ subject: string
   const timeSeconds = totalMarks * 60;
 
   const startQuiz = async () => {
-    if (!subject) return;
+    if (!subjectConfig.dbName) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('questions')
         .select('*')
-        .eq('subject', subject)
+        .eq('subject', subjectConfig.dbName) // અહીં ડેટાબેઝનું ગુજરાતી નામ જશે
         .limit(questionCount);
 
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        alert('આ વિષયના પ્રશ્નો ડેટાબેઝમાં મળ્યા નથી! કૃપા કરીને સુપાબેઝ ચેક કરો.');
+        alert(`"${subjectConfig.dbName}" વિષયના પ્રશ્નો ડેટાબેઝમાં મળ્યા નથી!`);
         return;
       }
 
@@ -114,12 +123,13 @@ export default function QuizPage({ params }: { params: Promise<{ subject: string
   const ss = String(timeLeft % 60).padStart(2, '0');
   const timerColor = timeLeft < 60 ? '#ef4444' : timeLeft < 300 ? '#f59e0b' : '#10b981';
 
+  // SETUP SCREEN
   if (screen === 'setup') return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
       <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '400px', width: '100%', textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.2)' }}>
         <div style={{ fontSize: '60px', marginBottom: '16px' }}>📝</div>
         <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#1e1b4b', marginBottom: '8px' }}>
-          {SUBJECT_NAMES[subject] || subject}
+          {subjectConfig.displayName}
         </h1>
         <p style={{ color: '#6b7280', marginBottom: '32px', fontSize: '15px' }}>કેટલા માર્ક્સ નો ટેસ્ટ આપવો છે?</p>
 
@@ -150,6 +160,7 @@ export default function QuizPage({ params }: { params: Promise<{ subject: string
     </div>
   );
 
+  // QUIZ SCREEN
   const q = questions[current];
   if (screen === 'quiz' && q) return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui' }}>
@@ -213,7 +224,7 @@ export default function QuizPage({ params }: { params: Promise<{ subject: string
           {current < questions.length - 1 ? (
             <button onClick={() => { setCurrent(p => p+1); setShowExplanation(false); }}
               style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}>
-              आगे →
+              આગળ →
             </button>
           ) : (
             <button onClick={submitQuiz}
@@ -226,6 +237,7 @@ export default function QuizPage({ params }: { params: Promise<{ subject: string
     </div>
   );
 
+  // RESULT SCREEN
   if (screen === 'result') return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
       <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.2)' }}>
