@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 
-// ૧૫ વિષયો અને પરીક્ષાઓનો સાદો ડેટા
 const EXAMS_DATA = [
   {
     id: "exam_1",
@@ -43,6 +42,11 @@ const EXAMS_DATA = [
 ];
 
 export default function HomePage() {
+  // સેફ્ટી ચેક: જો ડેટા ન હોય તો નાનું લોડિંગ બતાવે (આનાથી વરસેલ બિલ્ડ ક્યારેય ફેલ નહીં થાય)
+  if (!EXAMS_DATA || EXAMS_DATA.length === 0) {
+    return <div className="text-center p-10">Loading Dashboard...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
       {/* Header Section */}
@@ -69,7 +73,7 @@ export default function HomePage() {
 
             {/* Subjects Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {exam.subjects.map((subject) => (
+              {exam.subjects && exam.subjects.map((subject) => (
                 <Link
                   key={subject.id}
                   href={`/quiz/${subject.slug}`}
