@@ -1,245 +1,308 @@
-"use client";
-import { useEffect, useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { useRouter, useParams } from 'next/navigation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
 
-interface Question {
-  id: string;
-  question: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  explanation?: string;
-  subject: string;
-}
+const SUBJECT_NAMES: Record<string, string> = {
+  maths: '🔢 ગણિત', constitution: '📜 બંધારણ',
+  history: '🏛️ ઇતિહાસ', geography: '🌍 ભૂગોળ',
+  science: '🔬 વિજ્ઞાન', gujarati: '✍️ ગુજરાતી',
+  computer: '💻 કમ્પ્યૂટર', reasoning: '🧩 રીઝનિંગ',
+  english: '🔤 English', 'current-affairs': '📰 કરંટ અફેર્સ',
+};
 
-export default function QuizPage({ params }: { params: Promise<{ subject: string }> }) {
+type Question = {
+  id: string; question: string;
+  option_a: string; option_b: string; option_c: string; option_d: string;
+  correct_answer: string; explanation?: string; subject?: string;
+};
+
+type Screen = 'setup' | 'quiz' | 'result';
+
+export default function QuizPage() {
   const router = useRouter();
-  const [subject, setSubject] = useState("");
+  const params = useParams();
+  const subject = params?.subject as string;
+
+  const [screen, setScreen] = useState<Screen>('setup');
+  const [totalMarks, setTotalMarks] = useState(50);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [showResult, setShowResult] = useState(false);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600);
+  const [selected, setSelected] = useState<Record<number, string>>({});
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    params.then(p => setSubject(p.subject));
-  }, [params]);
+  const questionCount = totalMarks === 50 ? 50 : totalMarks === 100 ? 100 : 200;
+  const timeSeconds = totalMarks * 60;
 
-  useEffect(() => {
-    if (!subject) return;
-    async function load() {
-      setLoading(true);
-      const { data } = await supabase
-        .from("questions")
-        .select("*")
-        .ilike("subject", subject.replace(/_/g, " "))
-        .limit(20);
-      setQuestions(data || []);
-      setLoading(false);
+  const startQuiz = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('questions').select('*')
+      .eq('subject', subject).limit(questionCount);
+    setLoading(false);
+    if (error || !data?.length) {
+      alert('સવાલ મળ્યા નહીં! Admin થી ઉમેરો.');
+      return;
     }
-    load();
-  }, [subject]);
-
-  useEffect(() => {
-    if (done || loading) return;
-    if (timeLeft <= 0) { setDone(true); return; }
-    const t = setTimeout(() => setTimeLeft(p => p - 1), 1000);
-    return () => clearTimeout(t);
-  }, [timeLeft, done, loading]);
-
-  const formatTime = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-  const timerColor = timeLeft < 60 ? "#ef4444" : timeLeft < 180 ? "#f59e0b" : "#34d399";
-
-  const handleSelect = (opt: string) => {
-    if (showResult) return;
-    setSelected(opt);
-    setShowResult(true);
+    const shuffled = [...data].sort(() => Math.random() - 0.5);
+    setQuestions(shuffled);
+    setTimeLeft(timeSeconds);
+    setCurrent(0);
+    setSelected({});
+    setScreen('quiz');
   };
 
-  const handleNext = () => {
-    const q = questions[current];
-    if (selected === q.correct_answer) setScore(s => s + 1);
-    if (current + 1 < questions.length) {
-      setCurrent(c => c + 1);
-      setSelected(null);
-      setShowResult(false);
-    } else {
-      setDone(true);
-    }
-  };
+  const submitQuiz = useCallback(() => setScreen('result'), []);
 
-  const getOptStyle = (opt: string) => {
-    const base: React.CSSProperties = {
-      width: "100%", padding: "14px 18px", borderRadius: "14px",
-      border: "2px solid", cursor: showResult ? "default" : "pointer",
-      display: "flex", alignItems: "center", gap: "12px",
-      textAlign: "left", fontSize: "15px", fontWeight: "600",
-      transition: "all 0.2s", marginBottom: "10px"
-    };
-    if (!showResult) {
-      return { ...base, background: selected === opt ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.04)", borderColor: selected === opt ? "#6366f1" : "rgba(255,255,255,0.08)", color: "white" };
-    }
-    const q = questions[current];
-    const correct = q.correct_answer;
-    if (opt === correct) return { ...base, background: "rgba(52,211,153,0.2)", borderColor: "#34d399", color: "#34d399" };
-    if (opt === selected && opt !== correct) return { ...base, background: "rgba(248,113,113,0.2)", borderColor: "#f87171", color: "#f87171" };
-    return { ...base, background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.05)", color: "#475569" };
-  };
+  useEffect(() => {
+    if (screen !== 'quiz') return;
+    const t = setInterval(() => {
+      setTimeLeft(p => {
+        if (p <= 1) { clearInterval(t); submitQuiz(); return 0; }
+        return p - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [screen, submitQuiz]);
 
-  if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>
-        <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "18px" }}>પ્રશ્નો લોડ થઈ રહ્યા છે...</p>
-      </div>
-    </div>
-  );
+  const score = questions.reduce((acc, q, i) =>
+    selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+  const percent = questions.length ? Math.round((score / questions.length) * 100) : 0;
 
-  if (questions.length === 0) return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "48px", marginBottom: "16px" }}>📭</div>
-        <p style={{ color: "#f87171", fontWeight: "700", fontSize: "18px" }}>આ વિષય માટે પ્રશ્નો નથી!</p>
-        <button onClick={() => router.push("/")}
-          style={{ marginTop: "20px", padding: "12px 24px", background: "linear-gradient(135deg, #6366f1, #0ea5e9)", border: "none", borderRadius: "12px", color: "white", fontWeight: "700", cursor: "pointer" }}>
+  const mm = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+  const ss = String(timeLeft % 60).padStart(2, '0');
+  const timerRed = timeLeft < 60;
+
+  // ── SETUP ──────────────────────────────────────────
+  if (screen === 'setup') return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#667eea,#764ba2)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px', fontFamily:'system-ui' }}>
+      <div style={{ background:'white', borderRadius:'24px', padding:'40px', maxWidth:'400px', width:'100%', textAlign:'center', boxShadow:'0 25px 50px rgba(0,0,0,0.2)' }}>
+        <div style={{ fontSize:'60px', marginBottom:'16px' }}>📝</div>
+        <h1 style={{ fontSize:'26px', fontWeight:'900', color:'#1e1b4b', marginBottom:'8px' }}>
+          {SUBJECT_NAMES[subject] || subject}
+        </h1>
+        <p style={{ color:'#6b7280', marginBottom:'32px' }}>કેટલા માર્ક્સ નો ટેસ્ટ?</p>
+        <div style={{ display:'flex', flexDirection:'column', gap:'12px', marginBottom:'32px' }}>
+          {[
+            { marks:50,  label:'50 માર્ક્સ',  sub:'50 સવાલ • 50 મિનિટ',   color:'#10b981' },
+            { marks:100, label:'100 માર્ક્સ', sub:'100 સવાલ • 100 મિનિટ', color:'#3b82f6' },
+            { marks:200, label:'200 માર્ક્સ', sub:'200 સવાલ • 200 મિનિટ', color:'#8b5cf6' },
+          ].map(opt => (
+            <button key={opt.marks} onClick={() => setTotalMarks(opt.marks)}
+              style={{ padding:'16px', borderRadius:'14px', border:`3px solid ${totalMarks===opt.marks ? opt.color : '#e5e7eb'}`, background: totalMarks===opt.marks ? opt.color+'15' : 'white', cursor:'pointer' }}>
+              <div style={{ fontWeight:'800', fontSize:'18px', color: totalMarks===opt.marks ? opt.color : '#374151' }}>{opt.label}</div>
+              <div style={{ fontSize:'13px', color:'#6b7280' }}>{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+        <button onClick={startQuiz} disabled={loading}
+          style={{ width:'100%', padding:'16px', background: loading ? '#94a3b8' : 'linear-gradient(135deg,#667eea,#764ba2)', color:'white', border:'none', borderRadius:'14px', fontSize:'18px', fontWeight:'900', cursor: loading ? 'not-allowed' : 'pointer' }}>
+          {loading ? '⏳ લોડ...' : '🚀 ક્વિઝ શરૂ કરો'}
+        </button>
+        <button onClick={() => router.push('/')}
+          style={{ width:'100%', marginTop:'12px', padding:'12px', background:'transparent', color:'#6b7280', border:'2px solid #e5e7eb', borderRadius:'12px', cursor:'pointer' }}>
           ← પાછા જાઓ
         </button>
       </div>
     </div>
   );
 
-  if (done) {
-    const pct = Math.round((score / questions.length) * 100);
+  // ── QUIZ ───────────────────────────────────────────
+  const q = questions[current];
+  if (screen === 'quiz' && q) {
+    const answered = selected[current];
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-        <div style={{ maxWidth: "500px", width: "100%", textAlign: "center" }}>
-          <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.3), rgba(14,165,233,0.3))", border: "1px solid rgba(99,102,241,0.4)", borderRadius: "28px", padding: "40px", marginBottom: "20px" }}>
-            <div style={{ fontSize: "64px", marginBottom: "16px" }}>
-              {pct >= 80 ? "🏆" : pct >= 60 ? "🎯" : pct >= 40 ? "📚" : "💪"}
-            </div>
-            <h2 style={{ fontSize: "28px", fontWeight: "900", color: "white", margin: "0 0 8px" }}>ક્વિઝ પૂરી!</h2>
-            <div style={{ fontSize: "64px", fontWeight: "900", background: "linear-gradient(90deg, #818cf8, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: "12px 0" }}>
-              {score}/{questions.length}
-            </div>
-            <div style={{ fontSize: "20px", color: "#94a3b8", fontWeight: "600" }}>{pct}% Accuracy</div>
-            <div style={{ marginTop: "8px", fontSize: "16px", color: pct >= 70 ? "#34d399" : "#f87171", fontWeight: "700" }}>
-              {pct >= 80 ? "Excellent! 🌟" : pct >= 60 ? "Good Job! 👍" : pct >= 40 ? "Keep Practicing! 📖" : "Don't Give Up! 💪"}
-            </div>
+      <div style={{ minHeight:'100vh', background:'#0f172a', fontFamily:'system-ui', color:'white' }}>
+
+        {/* Top Bar */}
+        <div style={{ background:'#1e293b', padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100, borderBottom:'1px solid #334155' }}>
+          <button onClick={() => router.push('/')} style={{ background:'#334155', color:'white', border:'none', borderRadius:'8px', padding:'6px 12px', cursor:'pointer', fontSize:'13px' }}>← Home</button>
+          <div style={{ fontWeight:'800', fontSize:'15px' }}>{SUBJECT_NAMES[subject] || subject}</div>
+          <div style={{ background: timerRed ? '#ef444420' : '#10b98120', border:`2px solid ${timerRed ? '#ef4444' : '#10b981'}`, borderRadius:'10px', padding:'6px 14px', color: timerRed ? '#ef4444' : '#10b981', fontWeight:'900', fontSize:'18px' }}>
+            ⏱ {mm}:{ss}
           </div>
-          <div style={{ display: "flex", gap: "12px" }}>
-            <button onClick={() => { setCurrent(0); setScore(0); setSelected(null); setShowResult(false); setDone(false); setTimeLeft(600); }}
-              style={{ flex: 1, padding: "14px", background: "linear-gradient(135deg, #6366f1, #0ea5e9)", border: "none", borderRadius: "14px", color: "white", fontWeight: "800", cursor: "pointer", fontSize: "15px" }}>
-              🔄 ફરી રમો
-            </button>
-            <button onClick={() => router.push("/")}
-              style={{ flex: 1, padding: "14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", color: "white", fontWeight: "800", cursor: "pointer", fontSize: "15px" }}>
-              🏠 Home
-            </button>
+        </div>
+
+        {/* Progress */}
+        <div style={{ background:'#1e293b', padding:'10px 20px', display:'flex', justifyContent:'space-between', fontSize:'13px', color:'#94a3b8' }}>
+          <span>પ્રશ્ન {current+1} / {questions.length}</span>
+          <span style={{ color:'#10b981', fontWeight:'700' }}>Score: {score}</span>
+        </div>
+        <div style={{ height:'4px', background:'#334155' }}>
+          <div style={{ height:'100%', background:'linear-gradient(90deg,#667eea,#764ba2)', width:`${((current+1)/questions.length)*100}%`, transition:'width 0.3s' }} />
+        </div>
+
+        <div style={{ maxWidth:'640px', margin:'0 auto', padding:'20px 16px' }}>
+
+          {/* Question */}
+          <div style={{ background:'#1e293b', borderRadius:'16px', padding:'20px', marginBottom:'16px', border:'1px solid #334155' }}>
+            <div style={{ fontSize:'11px', color:'#818cf8', fontWeight:'700', letterSpacing:'1px', marginBottom:'10px' }}>
+              {(subject||'').toUpperCase()} • QUESTION {current+1}
+            </div>
+            <p style={{ fontSize:'17px', fontWeight:'600', margin:0, lineHeight:1.7, color:'white' }}>{q.question}</p>
           </div>
+
+          {/* Options */}
+          {(['A','B','C','D'] as const).map(opt => {
+            const val = q[`option_${opt.toLowerCase()}` as keyof Question] as string;
+            const isSelected = answered === opt;
+            const isCorrect = opt === q.correct_answer;
+            const showResult = !!answered;
+
+            let bg = '#1e293b';
+            let border = '#334155';
+            let iconRight = null;
+
+            if (showResult) {
+              if (isCorrect) { bg = '#064e3b'; border = '#10b981'; iconRight = '✅'; }
+              else if (isSelected && !isCorrect) { bg = '#450a0a'; border = '#ef4444'; iconRight = '❌'; }
+            } else if (isSelected) {
+              bg = '#1e3a5f'; border = '#3b82f6';
+            }
+
+            return (
+              <button key={opt}
+                onClick={() => { if (!answered) setSelected(p => ({...p, [current]: opt})); }}
+                style={{ width:'100%', marginBottom:'10px', padding:'14px 18px', borderRadius:'12px', border:`2px solid ${border}`, background:bg, cursor: answered ? 'default' : 'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:'12px', transition:'all 0.2s' }}>
+                <div style={{ width:'34px', height:'34px', borderRadius:'8px', background: showResult && isCorrect ? '#10b981' : showResult && isSelected ? '#ef4444' : '#334155', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'900', fontSize:'14px', flexShrink:0 }}>
+                  {opt}
+                </div>
+                <span style={{ fontSize:'15px', color:'#e2e8f0', flex:1 }}>{val}</span>
+                {iconRight && <span style={{ fontSize:'18px' }}>{iconRight}</span>}
+              </button>
+            );
+          })}
+
+          {/* Explanation - auto show after answer */}
+          {answered && q.explanation && (
+            <div style={{ background:'#1c1a00', border:'2px solid #ca8a04', borderRadius:'12px', padding:'16px', marginBottom:'12px' }}>
+              <div style={{ color:'#fbbf24', fontWeight:'700', fontSize:'13px', marginBottom:'6px' }}>💡 સ્પષ્ટીકરણ:</div>
+              <div style={{ color:'#fef3c7', fontSize:'14px', lineHeight:1.7 }}>{q.explanation}</div>
+            </div>
+          )}
+
+          {/* If no explanation, show correct answer */}
+          {answered && !q.explanation && (
+            <div style={{ background:'#064e3b', border:'2px solid #10b981', borderRadius:'12px', padding:'12px', marginBottom:'12px', color:'#6ee7b7', fontSize:'14px', fontWeight:'700' }}>
+              ✅ સાચો જવાબ: વિકલ્પ {q.correct_answer} છે.
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div style={{ display:'flex', gap:'12px', marginTop:'8px' }}>
+            <button onClick={() => setCurrent(p => Math.max(0,p-1))} disabled={current===0}
+              style={{ flex:1, padding:'14px', borderRadius:'12px', border:'2px solid #334155', background: current===0 ? '#0f172a' : '#1e293b', color: current===0 ? '#475569' : '#e2e8f0', fontWeight:'700', cursor: current===0 ? 'not-allowed' : 'pointer' }}>
+              ← પાછળ
+            </button>
+            {current < questions.length-1 ? (
+              <button onClick={() => setCurrent(p => p+1)}
+                style={{ flex:2, padding:'14px', borderRadius:'12px', border:'none', background:'linear-gradient(135deg,#667eea,#764ba2)', color:'white', fontWeight:'800', cursor:'pointer', fontSize:'15px' }}>
+                આગળ →
+              </button>
+            ) : (
+              <button onClick={submitQuiz}
+                style={{ flex:2, padding:'14px', borderRadius:'12px', border:'none', background:'linear-gradient(135deg,#10b981,#059669)', color:'white', fontWeight:'800', cursor:'pointer', fontSize:'15px' }}>
+                ✅ સબમિટ
+              </button>
+            )}
+          </div>
+
+          {/* Submit anytime */}
+          {current < questions.length-1 && (
+            <button onClick={submitQuiz}
+              style={{ width:'100%', marginTop:'10px', padding:'10px', background:'transparent', border:'2px solid #334155', borderRadius:'10px', color:'#94a3b8', fontSize:'13px', cursor:'pointer' }}>
+              🏁 હવે સબમિટ કરો ({Object.keys(selected).length}/{questions.length} answered)
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  const q = questions[current];
-  const opts = [
-    { key: "A", val: q.option_a },
-    { key: "B", val: q.option_b },
-    { key: "C", val: q.option_c },
-    { key: "D", val: q.option_d },
-  ];
+  // ── RESULT ─────────────────────────────────────────
+  if (screen === 'result') {
+    const wrong = questions.length - score;
+    const unanswered = questions.length - Object.keys(selected).length;
+    return (
+      <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#667eea,#764ba2)', padding:'20px', fontFamily:'system-ui' }}>
+        <div style={{ maxWidth:'480px', margin:'0 auto' }}>
 
-  return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui", color: "white" }}>
+          {/* Score Card */}
+          <div style={{ background:'white', borderRadius:'24px', padding:'32px', textAlign:'center', marginBottom:'16px', boxShadow:'0 25px 50px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize:'64px', marginBottom:'12px' }}>
+              {percent>=80?'🏆':percent>=60?'👍':percent>=40?'📚':'💪'}
+            </div>
+            <h2 style={{ fontSize:'26px', fontWeight:'900', color:'#1e1b4b', marginBottom:'4px' }}>
+              {percent>=80?'શ્રેષ્ઠ!':percent>=60?'સારું!':percent>=40?'ઠીક છે':'વધુ પ્રેક્ટિસ!'}
+            </h2>
+            <div style={{ fontSize:'48px', fontWeight:'900', color: percent>=60?'#10b981':'#ef4444', margin:'16px 0' }}>
+              {score}/{questions.length}
+            </div>
+            <div style={{ fontSize:'20px', color:'#6b7280' }}>{percent}% સાચા</div>
 
-      {/* Top Bar */}
-      <div style={{ background: "rgba(15,23,42,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "12px 20px", position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: "700px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button onClick={() => router.push("/")}
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "8px 14px", color: "#94a3b8", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>
-            ← Home
-          </button>
-          <span style={{ fontWeight: "800", fontSize: "16px", color: "white", textTransform: "capitalize" }}>
-            📚 {subject.replace(/_/g, " ")}
-          </span>
-          <div style={{ background: `${timerColor}20`, border: `1px solid ${timerColor}50`, borderRadius: "10px", padding: "8px 14px", color: timerColor, fontWeight: "800", fontFamily: "monospace", fontSize: "15px" }}>
-            ⏱ {formatTime(timeLeft)}
-          </div>
-        </div>
-      </div>
+            {/* Stats */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', margin:'20px 0' }}>
+              {[
+                { val:score, label:'✅ સાચા', bg:'#dcfce7', color:'#166534' },
+                { val:wrong, label:'❌ ખોટા', bg:'#fee2e2', color:'#991b1b' },
+                { val:unanswered, label:'⏭ છોડ્યા', bg:'#fef9c3', color:'#854d0e' },
+              ].map(s => (
+                <div key={s.label} style={{ background:s.bg, borderRadius:'12px', padding:'12px' }}>
+                  <div style={{ fontSize:'22px', fontWeight:'900', color:s.color }}>{s.val}</div>
+                  <div style={{ fontSize:'11px', color:s.color, fontWeight:'600' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
 
-      <div style={{ maxWidth: "700px", margin: "0 auto", padding: "24px 20px" }}>
-
-        {/* Progress */}
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#64748b", fontWeight: "600", marginBottom: "8px" }}>
-          <span>પ્રશ્ન {current + 1} / {questions.length}</span>
-          <span style={{ color: "#34d399" }}>Score: {score}</span>
-        </div>
-        <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: "99px", height: "6px", marginBottom: "24px" }}>
-          <div style={{ background: "linear-gradient(90deg, #6366f1, #0ea5e9)", height: "100%", borderRadius: "99px", width: `${((current + 1) / questions.length) * 100}%`, transition: "width 0.4s" }} />
-        </div>
-
-        {/* Question Card */}
-        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "24px", marginBottom: "20px" }}>
-          <div style={{ fontSize: "11px", fontWeight: "700", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "12px" }}>
-            {subject.replace(/_/g, " ")} • Question {current + 1}
-          </div>
-          <p style={{ fontSize: "18px", fontWeight: "700", color: "white", margin: 0, lineHeight: 1.6 }}>
-            {q.question}
-          </p>
-        </div>
-
-        {/* Options */}
-        <div>
-          {opts.map(({ key, val }) => (
-            <button key={key} onClick={() => handleSelect(key)} style={getOptStyle(key)}>
-              <span style={{
-                width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: "800", fontSize: "13px", flexShrink: 0,
-                background: showResult
-                  ? key === questions[current].correct_answer ? "#34d399"
-                  : key === selected ? "#f87171" : "rgba(255,255,255,0.06)"
-                  : selected === key ? "#6366f1" : "rgba(255,255,255,0.06)",
-                color: "white"
-              }}>
-                {key}
-              </span>
-              <span>{val}</span>
-              {showResult && key === questions[current].correct_answer && <span style={{ marginLeft: "auto", fontSize: "18px" }}>✅</span>}
-              {showResult && key === selected && key !== questions[current].correct_answer && <span style={{ marginLeft: "auto", fontSize: "18px" }}>❌</span>}
+            <button onClick={() => { setScreen('setup'); setSelected({}); setCurrent(0); }}
+              style={{ width:'100%', padding:'14px', background:'linear-gradient(135deg,#667eea,#764ba2)', color:'white', border:'none', borderRadius:'12px', fontSize:'16px', fontWeight:'800', cursor:'pointer', marginBottom:'10px' }}>
+              🔄 ફરીથી આપો
             </button>
-          ))}
-        </div>
-
-        {/* Explanation Box */}
-        {showResult && (
-          <div style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "16px", padding: "16px 20px", marginTop: "4px", marginBottom: "16px" }}>
-            <p style={{ margin: "0 0 6px", fontWeight: "800", color: "#fbbf24", fontSize: "14px" }}>💡 સ્પષ્ટીકરણ:</p>
-            <p style={{ margin: 0, color: "#e2e8f0", fontSize: "14px", lineHeight: 1.6 }}>
-              {q.explanation || `સાચો જવાબ: વિકલ્પ ${questions[current].correct_answer} છે.`}
-            </p>
+            <button onClick={() => router.push('/')}
+              style={{ width:'100%', padding:'12px', background:'transparent', color:'#6b7280', border:'2px solid #e5e7eb', borderRadius:'12px', cursor:'pointer' }}>
+              ← ઘર
+            </button>
           </div>
-        )}
 
-        {/* Next Button */}
-        {showResult && (
-          <button onClick={handleNext}
-            style={{ width: "100%", padding: "16px", background: "linear-gradient(135deg, #6366f1, #0ea5e9)", border: "none", borderRadius: "14px", color: "white", fontWeight: "800", fontSize: "16px", cursor: "pointer" }}>
-            {current + 1 === questions.length ? "🏁 ક્વિઝ પૂરી કરો" : "આગળ →"}
-          </button>
-        )}
+          {/* Answer Review */}
+          <div style={{ background:'white', borderRadius:'20px', padding:'20px', boxShadow:'0 10px 30px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ fontSize:'16px', fontWeight:'800', color:'#1e1b4b', marginBottom:'16px' }}>📋 જવાબ સમીક્ષા</h3>
+            {questions.map((q, i) => {
+              const userAns = selected[i];
+              const correct = userAns === q.correct_answer;
+              return (
+                <div key={i} style={{ marginBottom:'12px', padding:'12px', borderRadius:'10px', background: correct ? '#f0fdf4' : '#fef2f2', border:`1px solid ${correct?'#86efac':'#fca5a5'}` }}>
+                  <div style={{ fontSize:'12px', fontWeight:'700', color:'#64748b', marginBottom:'4px' }}>Q{i+1}</div>
+                  <div style={{ fontSize:'13px', color:'#1e1b4b', fontWeight:'600', marginBottom:'6px' }}>{q.question.substring(0,80)}...</div>
+                  <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                    <span style={{ fontSize:'12px', background: correct?'#dcfce7':'#fee2e2', color: correct?'#166534':'#dc2626', padding:'2px 8px', borderRadius:'6px', fontWeight:'700' }}>
+                      તમારો: {userAns || 'છોડ્યો'} {correct?'✅':'❌'}
+                    </span>
+                    {!correct && (
+                      <span style={{ fontSize:'12px', background:'#dcfce7', color:'#166534', padding:'2px 8px', borderRadius:'6px', fontWeight:'700' }}>
+                        સાચો: {q.correct_answer}
+                      </span>
+                    )}
+                  </div>
+                  {q.explanation && !correct && (
+                    <div style={{ fontSize:'12px', color:'#6b7280', marginTop:'6px', fontStyle:'italic' }}>💡 {q.explanation.substring(0,100)}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
