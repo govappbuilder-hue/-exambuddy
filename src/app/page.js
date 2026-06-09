@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // ૧૫ વિષયો અને પરીક્ષાઓનો સાદો ડેટા
 const EXAMS_DATA = [
@@ -43,8 +43,6 @@ const EXAMS_DATA = [
 ];
 
 export default function HomePage() {
-  const router = useRouter();
-
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
       {/* Header Section */}
@@ -72,9 +70,9 @@ export default function HomePage() {
             {/* Subjects Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {exam.subjects.map((subject) => (
-                <button
+                <Link
                   key={subject.id}
-                  onClick={() => router.push(`/quiz/${subject.slug}`)}
+                  href={`/quiz/${subject.slug}`}
                   className="group relative flex flex-col justify-between p-5 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl text-left transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <div>
@@ -89,7 +87,7 @@ export default function HomePage() {
                     Start Quiz 
                     <span className="transform group-hover:translate-x-1 transition-transform ml-1">→</span>
                   </div>
-                </button>
+                </Link>
               ))}
             </div>
           </div>
