@@ -2,20 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
-interface Subject {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface Exam {
-  id: string;
-  examName: string;
-  description: string;
-  subjects: Subject[];
-}
-
-const EXAMS_DATA: Exam[] = [
+// ૧૫ વિષયો અને પરીક્ષાઓનો સાદો ડેટા
+const EXAMS_DATA = [
   {
     id: "exam_1",
     examName: "GPSC Class 1 and 2",
