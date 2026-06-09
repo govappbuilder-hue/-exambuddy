@@ -42,16 +42,20 @@ interface Question {
 
 type ScreenType = 'setup' | 'quiz' | 'result';
 
+// 1. Pehle interface ko aise update kar (Line 42 ke aas-paas)
 interface PageProps {
   params: Promise<{ subject: string }>;
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+// 2. Ab function declaration aur params handling ko aise likh:
 export default function QuizPage({ params }: PageProps) {
   const router = useRouter();
-  const resolvedParams = use(params);
+  
+  // Is line ko dhyan se dekh, ye params ko unlock karegi
+  const resolvedParams = use(params); 
   const routeSubject = resolvedParams?.subject || "";
 
+  // Baki subjectConfig wali line waisi hi rahegi
   const subjectConfig = SUBJECT_MAP[routeSubject] || { dbName: routeSubject, displayName: routeSubject };
 
   const [screen, setScreen] = useState<ScreenType>('setup');
