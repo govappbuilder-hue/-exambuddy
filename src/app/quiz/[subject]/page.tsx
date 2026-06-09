@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -10,27 +10,43 @@ const supabase = createClient(
 );
 
 const SUBJECT_NAMES: Record<string, string> = {
-  maths: '🔢 ગણિત', constitution: '📜 બંધારણ',
-  history: '🏛️ ઇતિહાસ', geography: '🌍 ભૂગોળ',
-  science: '🔬 વિજ્ઞાન', gujarati: '✍️ ગુજરાતી',
-  computer: '💻 કમ્પ્યૂટર', reasoning: '🧩 રીઝનિંગ',
-  english: '🔤 English', 'current-affairs': '📰 કરંટ અફેર્સ',
+  maths: '🔢 ગણિત',
+  constitution: '📜 બંધારણ',
+  polity: '📜 બંધારણ',
+  history: '🏛️ ઇતિહાસ',
+  geography: '🌍 ભૂગોળ',
+  science: '🔬 વિજ્ઞાન',
+  gujarati: '✍️ ગુજરાતી',
+  computer: '💻 કમ્પ્યૂટર',
+  reasoning: '🧩 રીઝનિંગ',
+  english: '🔤 English',
+  law: '⚖️ કાયદો',
+  gk: '💡 સામાન્ય જ્ઞાન',
+  current_affairs: '📰 કરંટ અફેર્સ',
+  heritage: '🏛️ સાંસ્કૃતિક વારસો',
+  economics: '📈 અર્થશાસ્ત્ર',
+  pub_ad: '🏢 જાહેર વહીવટ'
 };
 
-type Question = {
-  id: string; question: string;
-  option_a: string; option_b: string; option_c: string; option_d: string;
-  correct_answer: string; explanation?: string;
-};
+interface Question {
+  id: string;
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: string;
+  explanation?: string;
+}
 
-type Screen = 'setup' | 'quiz' | 'result';
+type ScreenType = 'setup' | 'quiz' | 'result';
 
-export default function QuizPage() {
+export default function QuizPage({ params }: { params: Promise<{ subject: string }> }) {
   const router = useRouter();
-  const params = useParams();
-  const subject = params?.subject as string;
+  const unfoldedParams = use(params);
+  const subject = unfoldedParams?.subject || "";
 
-  const [screen, setScreen] = useState<Screen>('setup');
+  const [screen, setScreen] = useState<ScreenType>('setup');
   const [totalMarks, setTotalMarks] = useState(50);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [current, setCurrent] = useState(0);
@@ -39,22 +55,38 @@ export default function QuizPage() {
   const [loading, setLoading] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
 
-  const questionCount = totalMarks === 50 ? 50 : totalMarks === 100 ? 100 : 200;
+  const questionCount = totalMarks;
   const timeSeconds = totalMarks * 60;
 
   const startQuiz = async () => {
+    if (!subject) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('questions').select('*')
-      .eq('subject', subject).limit(questionCount);
-    setLoading(false);
-    if (error || !data?.length) { alert('સવાલ મળ્યા નહીં! Admin થી ઉમેરો.'); return; }
-    const shuffled = [...data].sort(() => Math.random() - 0.5);
-    setQuestions(shuffled);
-    setTimeLeft(timeSeconds);
-    setCurrent(0);
-    setSelected({});
-    setScreen('quiz');
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject', subject)
+        .limit(questionCount);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        alert('આ વિષયના પ્રશ્નો ડેટાબેઝમાં મળ્યા નથી! કૃપા કરીને સુપાબેઝ ચેક કરો.');
+        return;
+      }
+
+      const shuffled = [...data].sort(() => Math.random() - 0.5);
+      setQuestions(shuffled);
+      setTimeLeft(timeSeconds);
+      setCurrent(0);
+      setSelected({});
+      setScreen('quiz');
+    } catch (err) {
+      console.error(err);
+      alert('ડેટા લોડ કરવામાં ભૂલ આવી!');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitQuiz = useCallback(() => setScreen('result'), []);
@@ -62,7 +94,14 @@ export default function QuizPage() {
   useEffect(() => {
     if (screen !== 'quiz') return;
     const t = setInterval(() => {
-      setTimeLeft(p => { if (p <= 1) { clearInterval(t); submitQuiz(); return 0; } return p - 1; });
+      setTimeLeft(p => {
+        if (p <= 1) {
+          clearInterval(t);
+          submitQuiz();
+          return 0;
+        }
+        return p - 1;
+      });
     }, 1000);
     return () => clearInterval(t);
   }, [screen, submitQuiz]);
@@ -75,7 +114,6 @@ export default function QuizPage() {
   const ss = String(timeLeft % 60).padStart(2, '0');
   const timerColor = timeLeft < 60 ? '#ef4444' : timeLeft < 300 ? '#f59e0b' : '#10b981';
 
-  // SETUP SCREEN
   if (screen === 'setup') return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
       <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '400px', width: '100%', textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.2)' }}>
@@ -112,11 +150,9 @@ export default function QuizPage() {
     </div>
   );
 
-  // QUIZ SCREEN
   const q = questions[current];
   if (screen === 'quiz' && q) return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui' }}>
-      {/* Top Bar */}
       <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ color: 'white', fontWeight: '700', fontSize: '14px' }}>
           {current + 1} / {questions.length}
@@ -130,13 +166,11 @@ export default function QuizPage() {
         </button>
       </div>
 
-      {/* Progress Bar */}
       <div style={{ height: '4px', background: '#e2e8f0' }}>
         <div style={{ height: '100%', background: 'linear-gradient(90deg, #667eea, #764ba2)', width: `${((current + 1) / questions.length) * 100}%`, transition: 'width 0.3s' }} />
       </div>
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 16px' }}>
-        {/* Question */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '24px', marginBottom: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
           <div style={{ fontSize: '13px', color: '#8b5cf6', fontWeight: '700', marginBottom: '10px' }}>
             પ્રશ્ન {current + 1}
@@ -144,9 +178,9 @@ export default function QuizPage() {
           <p style={{ fontSize: '17px', fontWeight: '600', color: '#1e1b4b', margin: 0, lineHeight: 1.6 }}>{q.question}</p>
         </div>
 
-        {/* Options */}
         {['A','B','C','D'].map(opt => {
-          const val = q[`option_${opt.toLowerCase()}` as keyof Question] as string;
+          const optKey = `option_${opt.toLowerCase()}` as keyof Question;
+          const val = q[optKey] as string;
           const isSelected = selected[current] === opt;
           return (
             <button key={opt} onClick={() => { if (!selected[current]) setSelected(p => ({...p, [current]: opt})); setShowExplanation(false); }}
@@ -159,7 +193,6 @@ export default function QuizPage() {
           );
         })}
 
-        {/* Explanation */}
         {selected[current] && q.explanation && (
           <button onClick={() => setShowExplanation(p => !p)}
             style={{ width: '100%', padding: '12px', background: '#fffbeb', border: '2px solid #fbbf24', borderRadius: '12px', color: '#92400e', fontWeight: '700', cursor: 'pointer', marginBottom: '12px', fontSize: '14px' }}>
@@ -172,7 +205,6 @@ export default function QuizPage() {
           </div>
         )}
 
-        {/* Navigation */}
         <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
           <button onClick={() => { setCurrent(p => Math.max(0, p-1)); setShowExplanation(false); }} disabled={current === 0}
             style={{ flex: 1, padding: '14px', borderRadius: '12px', border: '2px solid #e2e8f0', background: current === 0 ? '#f8fafc' : 'white', color: current === 0 ? '#cbd5e1' : '#374151', fontWeight: '700', cursor: current === 0 ? 'not-allowed' : 'pointer', fontSize: '15px' }}>
@@ -181,7 +213,7 @@ export default function QuizPage() {
           {current < questions.length - 1 ? (
             <button onClick={() => { setCurrent(p => p+1); setShowExplanation(false); }}
               style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}>
-              આગળ →
+              आगे →
             </button>
           ) : (
             <button onClick={submitQuiz}
@@ -194,7 +226,6 @@ export default function QuizPage() {
     </div>
   );
 
-  // RESULT SCREEN
   if (screen === 'result') return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
       <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.2)' }}>

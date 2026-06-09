@@ -42,14 +42,8 @@ const EXAMS_DATA = [
 ];
 
 export default function HomePage() {
-  // સેફ્ટી ચેક: જો ડેટા ન હોય તો નાનું લોડિંગ બતાવે (આનાથી વરસેલ બિલ્ડ ક્યારેય ફેલ નહીં થાય)
-  if (!EXAMS_DATA || EXAMS_DATA.length === 0) {
-    return <div className="text-center p-10">Loading Dashboard...</div>;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-      {/* Header Section */}
       <div className="max-w-6xl mx-auto text-center mb-12">
         <h1 className="text-4xl font-extrabold text-blue-700 mb-3 tracking-tight">
           ExamBuddy Quiz Dashboard
@@ -59,11 +53,9 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Main Exams Container */}
       <div className="max-w-6xl mx-auto space-y-12">
         {EXAMS_DATA.map((exam) => (
           <div key={exam.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            {/* Exam Title */}
             <div className="border-b border-gray-100 pb-4 mb-6">
               <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 Exam: {exam.examName}
@@ -71,7 +63,6 @@ export default function HomePage() {
               <p className="text-sm text-gray-500 mt-1">{exam.description}</p>
             </div>
 
-            {/* Subjects Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {exam.subjects && exam.subjects.map((subject) => (
                 <Link
@@ -96,11 +87,6 @@ export default function HomePage() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Footer */}
-      <div className="text-center mt-16 text-gray-400 text-sm">
-        ExamBuddy
       </div>
     </div>
   );
