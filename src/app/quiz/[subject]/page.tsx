@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
+// સુપાબેઝ કનેક્શન સેટઅપ
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -23,6 +24,7 @@ export default function QuizPage() {
   const params = useParams();
   const router = useRouter();
   
+  // URL માંથી વિષય પકડીને સ્મોલ અક્ષરોમાં ફેરવવો
   const subjectParam = Array.isArray(params?.subject) ? params.subject[0] : params?.subject;
   const subject = subjectParam?.toLowerCase() || "";
 
@@ -52,7 +54,7 @@ export default function QuizPage() {
       }
     }
     loadQuestions();
-  } [subject]);
+  }, [subject]);
 
   const handleNext = () => {
     if (selectedOpt === questions[currentIdx]?.correct_answer) {
@@ -68,7 +70,7 @@ export default function QuizPage() {
   };
 
   if (loading) return <div className="p-8 text-center text-xl font-bold text-blue-600">⏳ પ્રશ્નો લોડ થઈ રહ્યા છે દીકા...</div>;
-  if (questions.length === 0) return <div className="p-8 text-center text-xl text-red-500 font-bold">❌ કોઈ પ્રશ્નો મળ્યા નથી!</div>;
+  if (questions.length === 0) return <div className="p-8 text-center text-xl text-red-500 font-bold">❌ આ વિષયના કોઈ પ્રશ્નો ડેટાબેઝમાં મળ્યા નથી!</div>;
 
   const currentQuestion = questions[currentIdx];
 
