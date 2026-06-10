@@ -2,23 +2,20 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase"; // તારું supabase કનેક્શન
+import { supabase } from "../lib/supabase"; 
 
 const SUBJECTS = [
-  // GPSC
   { name: "ઇતિહાસ", slug: "history", icon: "🏛️", exam: "GPSC", color: "#6366f1" },
   { name: "ભૂગોળ", slug: "geography", icon: "🌍", exam: "GPSC", color: "#6366f1" },
   { name: "અર્થશાસ્ત્ર", slug: "economics", icon: "📈", exam: "GPSC", color: "#6366f1" },
   { name: "સાંસ્કૃતિક વારસો", slug: "heritage", icon: "🏺", exam: "GPSC", color: "#6366f1" },
   { name: "ભારતનું બંધારણ", slug: "constitution", icon: "📜", exam: "GPSC", color: "#6366f1" },
-  // GSSSB
   { name: "ગણિત", slug: "maths", icon: "🔢", exam: "GSSSB", color: "#0ea5e9" },
   { name: "રીઝનિંગ", slug: "reasoning", icon: "🧩", exam: "GSSSB", color: "#0ea5e9" },
   { name: "ગુજરાતી સાહિત્ય", slug: "gujarati_sahitya", icon: "✍️", exam: "GSSSB", color: "#0ea5e9" },
   { name: "ગુજરાતી વ્યાકરણ", slug: "gujarati_vyakran", icon: "📝", exam: "GSSSB", color: "#0ea5e9" },
   { name: "English Grammar", slug: "english", icon: "🔤", exam: "GSSSB", color: "#0ea5e9" },
   { name: "જાહેર વહીવટ", slug: "pub_ad", icon: "🏢", exam: "GSSSB", color: "#0ea5e9" },
-  // Police
   { name: "કાયદો", slug: "law", icon: "⚖️", exam: "Police", color: "#f59e0b" },
   { name: "સામાન્ય જ્ઞાન", slug: "gk", icon: "💡", exam: "Police", color: "#f59e0b" },
   { name: "કરંટ અફેર્સ", slug: "current_affairs", icon: "📰", exam: "Police", color: "#f59e0b" },
@@ -38,8 +35,10 @@ export default function HomePage() {
   const router = useRouter();
   const [activeExam, setActiveExam] = useState("બધા");
   const [user, setUser] = useState(null);
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  // યુઝર લોગિન છે કે નહીં તે ચેક કરવા માટે
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -54,19 +53,31 @@ export default function HomePage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Google Login ફંક્શન
-  const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
+  // Magic Link Login લોજિક
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    setMessage("");
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email,
       options: {
-        redirectTo: window.location.origin,
+        emailRedirectTo: window.location.origin,
       },
     });
+
+    setLoading(false);
+    if (error) {
+      setMessage(`❌ એરર: ${error.message}`);
+    } else {
+      setMessage("📩 લોગિન લિંક તમારા ઈમેઈલ પર મોકલી દીધી છે! ચેક કરો.");
+      setEmail("");
+    }
   };
 
-  // Logout ફંક્શન
   const handleLogout = async () => {
-    await supabase.signOut();
+    await supabase.auth.signOut();
     setUser(null);
   };
 
@@ -96,19 +107,10 @@ export default function HomePage() {
               ⚙️ Admin
             </button>
 
-            {/* Dynamic Auth Button */}
-            {user ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "4px" }}>
-                <img src={user.user_metadata?.avatar_url} alt="profile" style={{ width: "30px", height: "30px", borderRadius: "50%", border: "1px solid #38bdf8" }} />
-                <button onClick={handleLogout}
-                  style={{ padding: "8px 14px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "10px", color: "#f87171", fontWeight: "700", fontSize: "13px", cursor: "pointer" }}>
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <button onClick={handleGoogleLogin}
-                style={{ padding: "8px 14px", background: "white", border: "none", borderRadius: "10px", color: "#0f172a", fontWeight: "700", fontSize: "13px", cursor: "pointer", marginLeft: "4px" }}>
-                🚀 Google Login
+            {user && (
+              <button onClick={handleLogout}
+                style={{ padding: "8px 14px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "10px", color: "#f87171", fontWeight: "700", fontSize: "13px", cursor: "pointer", marginLeft: "4px" }}>
+                Logout
               </button>
             )}
           </div>
@@ -126,14 +128,31 @@ export default function HomePage() {
             સરકારી નોકરી માટે<br/>
             <span style={{ background: "linear-gradient(90deg, #818cf8, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Smart Practice</span> કરો
           </h1>
-          {user && (
-            <p style={{ color: "#38bdf8", fontSize: "15px", fontWeight: "600", marginBottom: "10px" }}>
-              ગમતું નામ, વેલકમ બેક, {user.user_metadata?.full_name}! 👋
+          
+          {user ? (
+            <p style={{ color: "#38bdf8", fontSize: "16px", fontWeight: "700", marginBottom: "20px" }}>
+              Welcome back! 👤 {user.email}
             </p>
+          ) : (
+            /* Super Clean Login Box */
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "20px", borderRadius: "16px", maxWidth: "400px", margin: "20px auto" }}>
+              <form onSubmit={handleLogin} style={{ display: "flex", gap: "10px", flexDirection: "column" }}>
+                <input 
+                  type="email" 
+                  placeholder="તમારો ઈમેઈલ આઈડી લખો" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px", color: "white", fontSize: "14px", textAlign: "center" }}
+                />
+                <button type="submit" disabled={loading}
+                  style={{ background: "linear-gradient(90deg, #6366f1, #0ea5e9)", border: "none", borderRadius: "10px", padding: "10px", color: "white", fontWeight: "700", cursor: "pointer", fontSize: "14px" }}>
+                  {loading ? "મોકલી રહ્યા છીએ..." : "🚀 પાસવર્ડ વગર લોગિન કરો"}
+                </button>
+              </form>
+              {message && <p style={{ fontSize: "13px", marginTop: "12px", fontWeight: "600", color: message.startsWith("❌") ? "#f87171" : "#34d399" }}>{message}</p>}
+            </div>
           )}
-          <p style={{ color: "#64748b", fontSize: "16px", maxWidth: "500px", margin: "0 auto" }}>
-            GPSC • GSSSB • Police • SSC • Railway - બધા exam ની practice અહીં
-          </p>
         </div>
 
         {/* Current Affairs Banner */}
