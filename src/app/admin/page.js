@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
@@ -8,6 +8,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
+
+const ADMIN_PASSWORD = 'ExamBuddy@2025#Admin';
 
 const SUBJECTS = [
   { value: 'maths', label: '🔢 ગણિત' },
@@ -20,6 +22,14 @@ const SUBJECTS = [
   { value: 'reasoning', label: '🧩 રીઝનિંગ' },
   { value: 'english', label: '🔤 English' },
   { value: 'current-affairs', label: '📰 કરંટ અફેર્સ' },
+  { value: 'gujarati_sahitya', label: '📖 ગુજરાતી સાહિત્ય' },
+  { value: 'gujarati_vyakran', label: '📝 ગુજરાતી વ્યાકરણ' },
+  { value: 'law', label: '⚖️ કાયદો' },
+  { value: 'gk', label: '💡 સામાન્ય જ્ઞાન' },
+  { value: 'economics', label: '📈 અર્થશાસ્ત્ર' },
+  { value: 'heritage', label: '🏺 સાંસ્કૃતિક વારસો' },
+  { value: 'pub_ad', label: '🏢 જાહેર વહીવટ' },
+  { value: 'current_affairs', label: '📰 Current Affairs' },
 ];
 
 const SAMPLE_JSON = `[
@@ -30,31 +40,28 @@ const SAMPLE_JSON = `[
     "option_c": "26 નવેમ્બર 1949",
     "option_d": "2 ઓક્ટોબર 1950",
     "correct_answer": "B",
+    "subject": "constitution",
     "explanation": "ભારતનું બંધારણ 26 જાન્યુઆરી 1950 ના રોજ અમલમાં આવ્યું."
-  },
-  {
-    "question": "ગુજરાતની સ્થાપના ક્યારે થઈ?",
-    "option_a": "1 મે 1960",
-    "option_b": "15 ઓગસ્ટ 1947",
-    "option_c": "26 જાન્યુઆરી 1950",
-    "option_d": "1 નવેમ્બર 1956",
-    "correct_answer": "A",
-    "explanation": "ગુજરાત રાજ્યની સ્થાપના 1 મે 1960 ના રોજ થઈ."
   }
 ]`;
 
 export default function AdminPage() {
   const router = useRouter();
-  const [tab, setTab] = useState('bulk'); // 'bulk' | 'single'
+  const [authed, setAuthed] = useState(false);
+  const [passInput, setPassInput] = useState('');
+  const [passError, setPassError] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [tab, setTab] = useState('bulk');
+  const [stats, setStats] = useState({});
 
-  // Bulk upload state
+  // Bulk state
   const [jsonText, setJsonText] = useState('');
   const [subject, setSubject] = useState('maths');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [preview, setPreview] = useState([]);
 
-  // Single form state
+  // Single state
   const [form, setForm] = useState({
     question: '', option_a: '', option_b: '', option_c: '', option_d: '',
     correct_answer: 'A', subject: 'maths', explanation: ''
@@ -62,117 +69,212 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // Parse JSON and show preview
+  // ── Auth check on load ──
+  useEffect(() => {
+    const stored = sessionStorage.getItem('admin_auth');
+    if (stored === ADMIN_PASSWORD) setAuthed(true);
+  }, []);
+
+  // ── Load stats after auth ──
+  useEffect(() => {
+    if (!authed) return;
+    const loadStats = async () => {
+      const results = {};
+      for (const s of SUBJECTS) {
+        const { count } = await supabase
+          .from('questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('subject', s.value);
+        results[s.value] = count || 0;
+      }
+      setStats(results);
+    };
+    loadStats();
+  }, [authed]);
+
+  const handleLogin = () => {
+    if (passInput === ADMIN_PASSWORD) {
+      sessionStorage.setItem('admin_auth', ADMIN_PASSWORD);
+      setAuthed(true);
+      setPassError('');
+    } else {
+      setPassError('❌ Password ખોટો છે!');
+      setPassInput('');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_auth');
+    setAuthed(false);
+    router.push('/');
+  };
+
   const handleJsonChange = (text) => {
     setJsonText(text);
     setUploadResult(null);
     try {
       const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) {
-        setPreview(parsed.slice(0, 3));
-      }
-    } catch {
-      setPreview([]);
-    }
+      if (Array.isArray(parsed)) setPreview(parsed.slice(0, 3));
+    } catch { setPreview([]); }
   };
 
-  // Validate single question
-  const validateQuestion = (q) => {
-    return q.question && q.option_a && q.option_b && 
-           q.option_c && q.option_d && 
-           ['A','B','C','D'].includes(q.correct_answer?.toUpperCase());
-  };
+  const validateQuestion = (q) =>
+    q.question && q.option_a && q.option_b && q.option_c && q.option_d &&
+    ['A','B','C','D'].includes(q.correct_answer?.toUpperCase());
 
-  // Bulk Upload
   const handleBulkUpload = async () => {
     let parsed;
     try {
       parsed = JSON.parse(jsonText);
-      if (!Array.isArray(parsed)) throw new Error('Array joie');
+      if (!Array.isArray(parsed)) throw new Error();
     } catch {
-      setUploadResult({ type: 'error', msg: '❌ JSON format sahi nathi! Sample juo.' });
+      setUploadResult({ type: 'error', msg: '❌ JSON format sahi nathi!' });
       return;
     }
-
     const valid = parsed.filter(validateQuestion);
     const invalid = parsed.length - valid.length;
-
-    if (valid.length === 0) {
+    if (!valid.length) {
       setUploadResult({ type: 'error', msg: '❌ Koi valid question nathi!' });
       return;
     }
-
     setUploading(true);
     setUploadResult({ type: 'loading', msg: `⏳ ${valid.length} questions upload thaay che...` });
-
-    // Add subject to all questions
     const toInsert = valid.map(q => ({
       question: q.question.trim(),
-      option_a: q.option_a.trim(),
-      option_b: q.option_b.trim(),
-      option_c: q.option_c.trim(),
-      option_d: q.option_d.trim(),
+      option_a: q.option_a.trim(), option_b: q.option_b.trim(),
+      option_c: q.option_c.trim(), option_d: q.option_d.trim(),
       correct_answer: q.correct_answer.toUpperCase(),
       subject: q.subject || subject,
       explanation: q.explanation?.trim() || '',
     }));
-
-    // Insert in batches of 50
     let successCount = 0;
-    const batchSize = 50;
-    for (let i = 0; i < toInsert.length; i += batchSize) {
-      const batch = toInsert.slice(i, i + batchSize);
-      const { error } = await supabase.from('questions').insert(batch);
-      if (!error) successCount += batch.length;
+    for (let i = 0; i < toInsert.length; i += 50) {
+      const { error } = await supabase.from('questions').insert(toInsert.slice(i, i + 50));
+      if (!error) successCount += Math.min(50, toInsert.length - i);
     }
-
     setUploading(false);
     setUploadResult({
       type: 'success',
-      msg: `✅ ${successCount} questions successfully add thaya!${invalid > 0 ? ` (${invalid} skip thaya - incomplete data)` : ''}`
+      msg: `✅ ${successCount} questions add thaya!${invalid > 0 ? ` (${invalid} skip)` : ''}`
     });
-    if (successCount > 0) {
-      setJsonText('');
-      setPreview([]);
-    }
+    if (successCount > 0) { setJsonText(''); setPreview([]); }
+    // Refresh stats
+    const { count } = await supabase.from('questions').select('*', { count: 'exact', head: true }).eq('subject', subject);
+    setStats(p => ({ ...p, [subject]: count || 0 }));
   };
 
-  // Single Save
   const handleSave = async () => {
     if (!form.question || !form.option_a || !form.option_b || !form.option_c || !form.option_d) {
       setMsg('❌ બધા ફીલ્ડ ભરો!'); return;
     }
     setSaving(true);
-    const { error } = await supabase.from('questions').insert({
-      question: form.question, option_a: form.option_a,
-      option_b: form.option_b, option_c: form.option_c,
-      option_d: form.option_d, correct_answer: form.correct_answer,
-      subject: form.subject, explanation: form.explanation,
-    });
+    const { error } = await supabase.from('questions').insert({ ...form });
     setSaving(false);
-    if (error) { setMsg('❌ Error: ' + error.message); }
+    if (error) setMsg('❌ Error: ' + error.message);
     else {
       setMsg('✅ સવાલ સેવ થઈ ગયો!');
-      setForm({ question: '', option_a: '', option_b: '', option_c: '', option_d: '',
-        correct_answer: 'A', subject: 'maths', explanation: '' });
+      setForm({ question: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_answer: 'A', subject: 'maths', explanation: '' });
     }
   };
 
+  // ── LOGIN SCREEN ──
+  if (!authed) return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
+      <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '380px', width: '100%', boxShadow: '0 25px 60px rgba(0,0,0,0.4)', textAlign: 'center' }}>
+        <div style={{ fontSize: '56px', marginBottom: '12px' }}>🔐</div>
+        <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#1e1b4b', margin: '0 0 6px' }}>Admin Access</h1>
+        <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '28px' }}>ExamBuddy Secret Panel</p>
+
+        {passError && (
+          <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', fontWeight: '600' }}>
+            {passError}
+          </div>
+        )}
+
+        <div style={{ position: 'relative', marginBottom: '16px' }}>
+          <input
+            type={showPass ? 'text' : 'password'}
+            value={passInput}
+            onChange={e => setPassInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            placeholder="Admin password..."
+            style={{ width: '100%', padding: '14px 48px 14px 16px', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '16px', outline: 'none', boxSizing: 'border-box' }}
+            autoFocus
+          />
+          <button onClick={() => setShowPass(p => !p)}
+            style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>
+            {showPass ? '🙈' : '👁️'}
+          </button>
+        </div>
+
+        <button onClick={handleLogin}
+          style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginBottom: '12px' }}>
+          🔓 Login
+        </button>
+        <button onClick={() => router.push('/')}
+          style={{ width: '100%', padding: '12px', background: 'transparent', color: '#6b7280', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
+          ← Home
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── ADMIN PANEL ──
+  const totalQ = Object.values(stats).reduce((a, b) => a + b, 0);
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px', fontFamily: 'system-ui' }}>
-      <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', borderRadius: '20px', padding: '20px', marginBottom: '20px', textAlign: 'center', color: 'white' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>🛡️ Admin Panel</h1>
-          <p style={{ opacity: 0.8, margin: '5px 0 0', fontSize: '14px' }}>ExamBuddy Question Manager</p>
+        <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', borderRadius: '20px', padding: '18px 24px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
+          <div>
+            <h1 style={{ fontSize: '22px', fontWeight: '900', margin: 0 }}>🛡️ Admin Panel</h1>
+            <p style={{ opacity: 0.8, margin: '2px 0 0', fontSize: '13px' }}>ExamBuddy Question Manager • {totalQ} total questions</p>
+          </div>
+          <button onClick={handleLogout}
+            style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '2px solid rgba(255,255,255,0.4)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontWeight: '700' }}>
+            🚪 Logout
+          </button>
+        </div>
+
+        {/* Stats Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+          {[
+            { label: 'કુલ સવાલ', value: totalQ, icon: '❓', color: '#6366f1' },
+            { label: 'વિષયો', value: SUBJECTS.length, icon: '📚', color: '#8b5cf6' },
+            { label: 'Ready (10+)', value: Object.values(stats).filter(v => v >= 10).length, icon: '✅', color: '#10b981' },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'white', borderRadius: '14px', padding: '14px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '24px' }}>{s.icon}</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Subject Stats */}
+        <div style={{ background: 'white', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontWeight: '800', color: '#1e1b4b', marginBottom: '12px', fontSize: '14px' }}>📊 Subject wise Questions</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+            {SUBJECTS.map(s => {
+              const count = stats[s.value] || 0;
+              const ready = count >= 10;
+              return (
+                <div key={s.value} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: ready ? '#f0fdf4' : '#fef2f2', border: `1px solid ${ready ? '#86efac' : '#fca5a5'}` }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>{s.label}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: ready ? '#166534' : '#dc2626' }}>{count} {ready ? '✓' : '✗'}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
           {[
-            { key: 'bulk', label: '📦 Bulk Upload (JSON)' },
-            { key: 'single', label: '✏️ Single Question' },
+            { key: 'bulk', label: '📦 Bulk Upload' },
+            { key: 'single', label: '✏️ Single Add' },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: tab === t.key ? 'white' : 'rgba(255,255,255,0.2)', color: tab === t.key ? '#667eea' : 'white', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
@@ -181,150 +283,111 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* BULK UPLOAD TAB */}
+        {/* BULK TAB */}
         {tab === 'bulk' && (
-          <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
-
-            {/* Subject Select */}
+          <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>
-                📚 Default વિષય (JSON ma subject ન હોય તો આ વપરાશે)
-              </label>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📚 Default Subject</label>
               <select value={subject} onChange={e => setSubject(e.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
                 {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
 
-            {/* JSON Format Info */}
-            <div style={{ background: '#f0fdf4', border: '2px solid #86efac', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
-              <div style={{ fontWeight: '700', color: '#166534', fontSize: '13px', marginBottom: '8px' }}>
-                📋 JSON Format (આ structure follow કરો):
-              </div>
-              <pre style={{ fontSize: '11px', color: '#374151', margin: 0, overflowX: 'auto', lineHeight: 1.6 }}>{`[
-  {
-    "question": "સવાલ અહીં",
-    "option_a": "વિકલ્પ A",
-    "option_b": "વિકલ્પ B", 
-    "option_c": "વિકલ્પ C",
-    "option_d": "વિકલ્પ D",
-    "correct_answer": "A",
-    "subject": "maths",
-    "explanation": "સ્પષ્ટીકરણ (optional)"
-  }
-]`}</pre>
+            <div style={{ background: '#f0fdf4', border: '2px solid #86efac', borderRadius: '12px', padding: '12px', marginBottom: '14px' }}>
+              <div style={{ fontWeight: '700', color: '#166534', fontSize: '12px', marginBottom: '6px' }}>📋 JSON Format:</div>
+              <pre style={{ fontSize: '11px', color: '#374151', margin: 0, overflowX: 'auto' }}>{`[{"question":"...","option_a":"...","option_b":"...","option_c":"...","option_d":"...","correct_answer":"A","subject":"maths","explanation":"..."}]`}</pre>
             </div>
 
-            {/* Sample Button */}
             <button onClick={() => handleJsonChange(SAMPLE_JSON)}
-              style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '2px dashed #94a3b8', borderRadius: '10px', color: '#64748b', fontWeight: '700', cursor: 'pointer', fontSize: '13px', marginBottom: '16px' }}>
-              📝 Sample JSON Load કરો (test માટે)
+              style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '2px dashed #94a3b8', borderRadius: '10px', color: '#64748b', fontWeight: '700', cursor: 'pointer', fontSize: '13px', marginBottom: '14px' }}>
+              📝 Sample Load
             </button>
 
-            {/* JSON Textarea */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>
-                📄 JSON Paste કરો
-              </label>
-              <textarea
-                value={jsonText}
-                onChange={e => handleJsonChange(e.target.value)}
-                placeholder='[ { "question": "...", "option_a": "...", ... } ]'
-                style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', minHeight: '160px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace' }}
-              />
-            </div>
+            <textarea value={jsonText} onChange={e => handleJsonChange(e.target.value)}
+              placeholder='[ { "question": "...", ... } ]'
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', minHeight: '150px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace', marginBottom: '14px' }} />
 
-            {/* Preview */}
             {preview.length > 0 && (
-              <div style={{ background: '#eff6ff', border: '2px solid #bfdbfe', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: '700', color: '#1d4ed8', fontSize: '13px', marginBottom: '8px' }}>
-                  👁️ Preview (પ્રથમ {preview.length} સવાલ):
-                </div>
+              <div style={{ background: '#eff6ff', border: '2px solid #bfdbfe', borderRadius: '12px', padding: '12px', marginBottom: '14px' }}>
+                <div style={{ fontWeight: '700', color: '#1d4ed8', fontSize: '12px', marginBottom: '8px' }}>👁️ Preview ({preview.length} questions):</div>
                 {preview.map((q, i) => (
-                  <div key={i} style={{ background: 'white', borderRadius: '8px', padding: '10px', marginBottom: '6px', fontSize: '12px' }}>
-                    <div style={{ fontWeight: '700', color: '#1e1b4b', marginBottom: '4px' }}>Q{i+1}: {q.question?.substring(0, 80)}...</div>
-                    <div style={{ color: '#10b981', fontWeight: '600' }}>✅ સાચો: {q.correct_answer} → {q[`option_${q.correct_answer?.toLowerCase()}`]?.substring(0, 40)}</div>
+                  <div key={i} style={{ background: 'white', borderRadius: '8px', padding: '8px', marginBottom: '6px', fontSize: '12px' }}>
+                    <div style={{ fontWeight: '700', color: '#1e1b4b' }}>Q{i+1}: {q.question?.substring(0, 70)}...</div>
+                    <div style={{ color: '#10b981', fontWeight: '600' }}>✅ {q.correct_answer} → {q[`option_${q.correct_answer?.toLowerCase()}`]?.substring(0, 40)}</div>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Result Message */}
             {uploadResult && (
-              <div style={{
-                background: uploadResult.type === 'success' ? '#dcfce7' : uploadResult.type === 'error' ? '#fee2e2' : '#fffbeb',
-                color: uploadResult.type === 'success' ? '#166534' : uploadResult.type === 'error' ? '#dc2626' : '#92400e',
-                padding: '12px 16px', borderRadius: '10px', marginBottom: '16px',
-                fontWeight: '600', fontSize: '14px'
-              }}>
+              <div style={{ background: uploadResult.type === 'success' ? '#dcfce7' : uploadResult.type === 'error' ? '#fee2e2' : '#fffbeb', color: uploadResult.type === 'success' ? '#166534' : uploadResult.type === 'error' ? '#dc2626' : '#92400e', padding: '12px', borderRadius: '10px', marginBottom: '14px', fontWeight: '600', fontSize: '14px' }}>
                 {uploadResult.msg}
               </div>
             )}
 
-            {/* Upload Button */}
             <button onClick={handleBulkUpload} disabled={uploading || !jsonText.trim()}
-              style={{ width: '100%', padding: '14px', background: uploading || !jsonText.trim() ? '#94a3b8' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: uploading || !jsonText.trim() ? 'not-allowed' : 'pointer' }}>
-              {uploading ? '⏳ Upload થઈ રહ્યું છે...' : '🚀 Bulk Upload કરો'}
+              style={{ width: '100%', padding: '14px', background: uploading || !jsonText.trim() ? '#94a3b8' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: uploading || !jsonText.trim() ? 'not-allowed' : 'pointer' }}>
+              {uploading ? '⏳ Upload...' : '🚀 Bulk Upload'}
             </button>
           </div>
         )}
 
-        {/* SINGLE QUESTION TAB */}
+        {/* SINGLE TAB */}
         {tab === 'single' && (
-          <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+          <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             {msg && (
-              <div style={{ background: msg.includes('✅') ? '#dcfce7' : '#fee2e2', color: msg.includes('✅') ? '#166534' : '#dc2626', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontWeight: '600', fontSize: '14px' }}>
+              <div style={{ background: msg.includes('✅') ? '#dcfce7' : '#fee2e2', color: msg.includes('✅') ? '#166534' : '#dc2626', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontWeight: '600', fontSize: '14px' }}>
                 {msg}
               </div>
             )}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📚 વિષય</label>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📚 Subject</label>
               <select value={form.subject} onChange={e => setForm({...form, subject: e.target.value})}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
                 {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>❓ પ્રશ્ન</label>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>❓ Question</label>
               <textarea value={form.question} onChange={e => setForm({...form, question: e.target.value})}
-                placeholder="પ્રશ્ન અહીં લખો..."
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '80px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                placeholder="પ્રશ્ન અહીં..."
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '80px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
             </div>
             {['A','B','C','D'].map(opt => (
-              <div key={opt} style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>
-                  {opt === form.correct_answer ? '✅' : '⬜'} વિકલ્પ {opt}
+              <div key={opt} style={{ marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '12px' }}>
+                  {opt === form.correct_answer ? '✅' : '⬜'} Option {opt}
                 </label>
                 <input value={form[`option_${opt.toLowerCase()}`]}
                   onChange={e => setForm({...form, [`option_${opt.toLowerCase()}`]: e.target.value})}
-                  placeholder={`વિકલ્પ ${opt}`}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `2px solid ${opt === form.correct_answer ? '#86efac' : '#e5e7eb'}`, fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
+                  placeholder={`Option ${opt}`}
+                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `2px solid ${opt === form.correct_answer ? '#86efac' : '#e5e7eb'}`, fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             ))}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>✅ સાચો જવાબ</label>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>✅ Correct Answer</label>
               <select value={form.correct_answer} onChange={e => setForm({...form, correct_answer: e.target.value})}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #86efac', fontSize: '15px', outline: 'none' }}>
-                {['A','B','C','D'].map(o => <option key={o} value={o}>વિકલ્પ {o}</option>)}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #86efac', fontSize: '15px', outline: 'none' }}>
+                {['A','B','C','D'].map(o => <option key={o} value={o}>Option {o}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>💡 સ્પષ્ટીકરણ (Optional)</label>
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>💡 Explanation (optional)</label>
               <textarea value={form.explanation} onChange={e => setForm({...form, explanation: e.target.value})}
-                placeholder="જવાબ સમજ..."
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '60px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                placeholder="સ્પષ્ટીકરણ..."
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '60px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
             </div>
             <button onClick={handleSave} disabled={saving}
-              style={{ width: '100%', padding: '14px', background: saving ? '#94a3b8' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: saving ? 'not-allowed' : 'pointer' }}>
-              {saving ? '⏳ સેવ થઈ રહ્યો છે...' : '💾 Save MCQ'}
+              style={{ width: '100%', padding: '14px', background: saving ? '#94a3b8' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: saving ? 'not-allowed' : 'pointer' }}>
+              {saving ? '⏳ Saving...' : '💾 Save Question'}
             </button>
           </div>
         )}
 
-        {/* Back Button */}
         <button onClick={() => router.push('/')}
           style={{ width: '100%', marginTop: '15px', padding: '12px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '2px solid rgba(255,255,255,0.4)', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}>
-          ← મુખ્ય પેજ
+          ← Home
         </button>
       </div>
     </div>
