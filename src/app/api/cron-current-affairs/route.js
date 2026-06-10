@@ -1,6 +1,9 @@
-import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createClient } from '@supabase/supabase-js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from "@supabase/supabase-js";
+
+const genAI = new GoogleGenerativeAI(
+  process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
+);
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -9,72 +12,48 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'Gemini API key missing!' }, { status: 400 });
-    }
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString("gu-IN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
-    const prompt = `
-આજની તારીખ ${todayStr} છે. Gujarat ના GPSC/GSSSB/Police exam ના students માટે આજના top 5 current affairs Gujarati ma generate karo.
-
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "bullet_points": [
-    "સમાચાર ૧ - વિગતવાર",
-    "સમાચાર ૨ - વિગતવાર", 
-    "સમાચાર ૩ - વિગતવાર",
-    "સમાચાર ૪ - વિગતવાર",
-    "સમાચાર ૫ - વિગતવાર"
-  ],
-  "quiz_questions": [
-    {
-      "question": "પ્રશ્ન Gujarati ma?",
-      "a": "વિકલ્પ A",
-      "b": "વિકલ્પ B",
-      "c": "વિકલ્પ C", 
-      "d": "વિકલ્પ D",
-      "correct_option": "a"
-    }
-  ]
-}
-
-Generate 5 quiz questions based on the bullet points.
-`;
+    const prompt = `Aaj na ${today} na GPSC/UPSC exam mate important current affairs Gujarati ma generate karo.
+Return ONLY valid JSON array, no markdown:
+[
+  {
+    "title": "headline Gujarati ma",
+    "summary": "2-3 line summary Gujarati ma",
+    "category": "National/International/Economy/Science/Sports",
+    "importance": "High/Medium/Low"
+  }
+]
+Exactly 8 items generate karo.`;
 
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
-    const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const jsonMatch = clean.match(/\[[\s\S]*\]/);
+    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
-    // Delete today's old record if exists
-    await supabase
-      .from('daily_current_affairs')
-      .delete()
-      .eq('news_date', todayStr);
+    const today2 = new Date().toISOString().split("T")[0];
 
-    // Insert new
-    const { error } = await supabase
-      .from('daily_current_affairs')
-      .insert({
-        news_date: todayStr,
-        bullet_points: parsed.bullet_points,
-        quiz_questions: parsed.quiz_questions
-      });
+    const { error } = await supabase.from("current_affairs").upsert(
+      {
+        date: today2,
+        articles: parsed,
+        generated_at: new Date().toISOString(),
+      },
+      { onConflict: "date" }
+    );
 
     if (error) throw error;
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'આજના સમાચાર ready!',
-      count: parsed.bullet_points.length
-    });
-
+    return Response.json({ success: true, count: parsed.length });
   } catch (error) {
-    console.error('CA Error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("CA Error:", error);
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }
