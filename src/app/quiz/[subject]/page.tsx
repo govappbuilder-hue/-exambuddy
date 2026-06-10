@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, use } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
@@ -47,11 +47,8 @@ interface PageProps {
 
 export default function QuizPage({ params }: PageProps) {
   const router = useRouter();
-  const resolvedParams = use(params);
-  const routeSubject = resolvedParams?.subject || "";
-
-  const subjectConfig = SUBJECT_MAP[routeSubject] || { dbName: routeSubject, displayName: routeSubject };
-
+  
+  const [routeSubject, setRouteSubject] = useState<string>("");
   const [screen, setScreen] = useState<ScreenType>('setup');
   const [totalMarks, setTotalMarks] = useState(50);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -59,6 +56,17 @@ export default function QuizPage({ params }: PageProps) {
   const [selected, setSelected] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // Next.js 15 પ્રિન્સિપલ મુજબ params ને સેટઅપ કરવું
+  useEffect(() => {
+    params.then((resolved) => {
+      if (resolved?.subject) {
+        setRouteSubject(resolved.subject);
+      }
+    }).catch(console.error);
+  }, [params]);
+
+  const subjectConfig = SUBJECT_MAP[routeSubject] || { dbName: routeSubject, displayName: routeSubject };
 
   const questionCount = totalMarks;
   const timeSeconds = totalMarks * 60;
@@ -80,7 +88,6 @@ export default function QuizPage({ params }: PageProps) {
         return;
       }
 
-      // ૩. પ્રશ્નો રેન્ડમાઇઝ કરવા (Shuffling logic)
       const shuffled = [...data].sort(() => Math.random() - 0.5);
       setQuestions(shuffled);
       setTimeLeft(timeSeconds);
@@ -112,7 +119,6 @@ export default function QuizPage({ params }: PageProps) {
     return () => clearInterval(t);
   }, [screen, submitQuiz]);
 
-  // ૨. નેગેટિવ માર્કિંગ કેલ્ક્યુલેશન (-0.25)
   const correctCount = questions.reduce((acc, q, i) => selected[i] === q.correct_answer ? acc + 1 : acc, 0);
   const attemptedCount = Object.keys(selected).length;
   const wrongCount = attemptedCount - correctCount;
@@ -124,7 +130,7 @@ export default function QuizPage({ params }: PageProps) {
   const ss = String(timeLeft % 60).padStart(2, '0');
   const timerColor = timeLeft < 60 ? '#ef4444' : timeLeft < 300 ? '#fbbf24' : '#34d399';
 
-  // SETUP SCREEN
+  // 1️⃣ SETUP SCREEN
   if (screen === 'setup') return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 flex items-center justify-center p-4 font-sans relative overflow-hidden">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -151,7 +157,7 @@ export default function QuizPage({ params }: PageProps) {
         </div>
 
         <button onClick={startQuiz} disabled={loading}
-          className="w-full py-4 bg-gradient-to-r from-violet-600 to-blue-600 text-white font-black rounded-2xl text-lg shadow-lg shadow-violet-600/20 hover:opacity-90 transition-all disabled:opacity-50">
+          className="w-full py-4 bg-gradient-to-r from-violet-600 to-blue-600 text-white font-black rounded-2xl text-lg shadow-lg hover:opacity-90 transition-all disabled:opacity-50">
           {loading ? '⏳ લોડ થઈ રહ્યું છે...' : '🚀 ક્વિઝ શરૂ કરો'}
         </button>
         <button onClick={() => router.push('/')}
@@ -162,7 +168,7 @@ export default function QuizPage({ params }: PageProps) {
     </div>
   );
 
-  // QUIZ SCREEN
+  // 2️⃣ QUIZ SCREEN
   const q = questions[current];
   const hasAnswered = selected[current] !== undefined;
 
@@ -191,7 +197,6 @@ export default function QuizPage({ params }: PageProps) {
           <p className="text-lg sm:text-xl font-bold leading-relaxed text-white">{q.question}</p>
         </div>
 
-        {/* ૧. સાચો/ખોટો જવાબ ઈન્સ્ટન્ટ બતાડવો (Interactive Feedback) */}
         <div className="space-y-3">
           {['A','B','C','D'].map(opt => {
             const optKey = `option_${opt.toLowerCase()}` as keyof Question;
@@ -205,12 +210,10 @@ export default function QuizPage({ params }: PageProps) {
 
             if (hasAnswered) {
               if (isCorrectAnswer) {
-                // સાચો જવાબ હંમેશા લીલો થશે
-                buttonStyle = "border-emerald-500 bg-emerald-500/20 text-emerald-200 font-bold shadow-lg shadow-emerald-500/5";
+                buttonStyle = "border-emerald-500 bg-emerald-500/20 text-emerald-200 font-bold shadow-lg";
                 badgeStyle = "bg-emerald-500 text-white";
               } else if (isCurrentSelection) {
-                // જો યુઝરે ખોટો પસંદ કર્યો હોય તો તે લાલ થશે
-                buttonStyle = "border-red-500 bg-red-500/20 text-red-200 font-bold shadow-lg shadow-red-500/5";
+                buttonStyle = "border-red-500 bg-red-500/20 text-red-200 font-bold shadow-lg";
                 badgeStyle = "bg-red-500 text-white";
               } else {
                 buttonStyle = "border-slate-900 bg-slate-900/10 text-slate-500 opacity-60";
@@ -231,7 +234,6 @@ export default function QuizPage({ params }: PageProps) {
           })}
         </div>
 
-        {/* એક્સપ્લેનેશન બોક્સ જવાબ આપતા જ ઓટોમેટિક ઓપન થશે */}
         {hasAnswered && q.explanation && (
           <div className="mt-6 bg-slate-900/40 border border-amber-500/20 rounded-2xl p-5 shadow-lg animate-fadeIn">
             <div className="text-amber-400 font-black text-sm flex items-center gap-2 mb-2">
@@ -264,7 +266,7 @@ export default function QuizPage({ params }: PageProps) {
     </div>
   );
 
-  // RESULT SCREEN (નવું એડવાન્સ નેગેટિવ સ્કોરકાર્ડ)
+  // 3️⃣ RESULT SCREEN
   if (screen === 'result') return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 flex items-center justify-center p-4 font-sans relative overflow-hidden">
       <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -275,7 +277,6 @@ export default function QuizPage({ params }: PageProps) {
         <h2 className="text-3xl font-black text-white mb-1">પરીક્ષાનું પરિણામ</h2>
         <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-6">OFFICIAL SCORECARD</p>
 
-        {/* કુલ ફાઈનલ માર્ક્સ (નેગેટિવ બાદ કરીને) */}
         <div className="bg-slate-950/60 border border-slate-800 rounded-2xl py-6 px-4 mb-6 shadow-inner">
           <div className={`text-5xl font-black ${finalScore >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {finalScore} <span className="text-xl text-slate-600">/ {questions.length}</span>
@@ -283,7 +284,6 @@ export default function QuizPage({ params }: PageProps) {
           <div className="text-sm font-bold text-slate-400 mt-2">મેરિટ ગુણ (Final Merit Marks)</div>
         </div>
 
-        {/* ડિટેઇલ સ્કોરબોર્ડ */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3">
             <div className="text-xl font-black text-emerald-400">{correctCount}</div>
@@ -307,7 +307,7 @@ export default function QuizPage({ params }: PageProps) {
         </button>
         <button onClick={() => router.push('/')}
           className="w-full mt-3 py-3 border border-slate-800 rounded-xl text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all">
-          ← મુખ્ય ડાન્સબોર્ડ પર જાઓ
+          ← મુખ્ય ડૅશબોર્ડ પર જાઓ
         </button>
       </div>
     </div>
