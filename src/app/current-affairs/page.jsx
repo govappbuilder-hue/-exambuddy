@@ -20,9 +20,7 @@ export default function CurrentAffairsPage() {
   const [done, setDone] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  useEffect(() => {
-    fetchTodayNews();
-  }, []);
+  useEffect(() => { fetchTodayNews(); }, []);
 
   const fetchTodayNews = async () => {
     setLoading(true);
@@ -39,15 +37,97 @@ export default function CurrentAffairsPage() {
   const generateNews = async () => {
     setGenerating(true);
     try {
-      const res = await fetch('/api/cron-current-affairs');
-      const data = await res.json();
-      if (data.success) {
-        await fetchTodayNews();
-      } else {
-        alert('Error: ' + data.error);
+      // Direct Gemini API call with latest model
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      if (!apiKey) { alert('Gemini API key missing!'); setGenerating(false); return; }
+
+      const prompt = `You are an expert on Gujarat and India current affairs for government exam preparation (GPSC, GSSSB, Police).
+
+Generate today's top 5 current affairs news in Gujarati language.
+
+Return ONLY this exact JSON (no extra text):
+{
+  "bullet_points": [
+    "સમાચાર 1 - વિગતવાર માહિતી",
+    "સમાચાર 2 - વિગતવાર માહિતી", 
+    "સમાચાર 3 - વિગતવાર માહિતી",
+    "સમાચાર 4 - વિગતવાર માહિતી",
+    "સમાચાર 5 - વિગતવાર માહિતી"
+  ],
+  "quiz_questions": [
+    {
+      "question": "સવાલ 1?",
+      "a": "વિકલ્પ A",
+      "b": "વિકલ્પ B",
+      "c": "વિકલ્પ C", 
+      "d": "વિકલ્પ D",
+      "correct_option": "a",
+      "explanation": "સ્પષ્ટીકરણ"
+    },
+    {
+      "question": "સવાલ 2?",
+      "a": "વિકલ્પ A",
+      "b": "વિકલ્પ B",
+      "c": "વિકલ્પ C",
+      "d": "વિકલ્પ D", 
+      "correct_option": "b",
+      "explanation": "સ્પષ્ટીકરણ"
+    },
+    {
+      "question": "સવાલ 3?",
+      "a": "વિકલ્પ A",
+      "b": "વિકલ્પ B",
+      "c": "વિકલ્પ C",
+      "d": "વિકલ્પ D",
+      "correct_option": "c",
+      "explanation": "સ્પષ્ટીકરણ"
+    }
+  ]
+}`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || 'Gemini API error');
       }
+
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      // Parse JSON from response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid response format');
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      const today = new Date().toISOString().split('T')[0];
+
+      // Save to Supabase
+      const { error } = await supabase
+        .from('daily_current_affairs')
+        .upsert({
+          news_date: today,
+          bullet_points: parsed.bullet_points,
+          quiz_questions: parsed.quiz_questions,
+          created_at: new Date().toISOString()
+        }, { onConflict: 'news_date' });
+
+      if (error) throw error;
+      await fetchTodayNews();
+
     } catch (e) {
-      alert('Network error!');
+      console.error(e);
+      alert('Error: ' + e.message);
     }
     setGenerating(false);
   };
@@ -75,7 +155,7 @@ export default function CurrentAffairsPage() {
     <div style={{ minHeight: '100vh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', color: 'white' }}>
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>📰</div>
-        <p style={{ color: '#818cf8', fontWeight: '700', fontSize: '18px' }}>આજના સમાચાર લોડ થઈ રહ્યા છે...</p>
+        <p style={{ color: '#818cf8', fontWeight: '700', fontSize: '18px' }}>લોડ થઈ રહ્યું છે...</p>
       </div>
     </div>
   );
@@ -90,7 +170,7 @@ export default function CurrentAffairsPage() {
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '8px 14px', color: '#94a3b8', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
             ← Back
           </button>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '900', background: 'linear-gradient(90deg, #818cf8, #38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '900', background: 'linear-gradient(90deg,#818cf8,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             📰 આજના કરંટ અફેર્સ
           </h1>
           <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#475569', fontWeight: '600' }}>
@@ -99,7 +179,7 @@ export default function CurrentAffairsPage() {
         </div>
 
         {!news ? (
-          /* No news state */
+          /* No news */
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '48px', textAlign: 'center' }}>
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>🤖</div>
             <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'white', marginBottom: '8px' }}>
@@ -109,22 +189,20 @@ export default function CurrentAffairsPage() {
               AI Gemini દ્વારા આજના current affairs generate કરો - free & instant!
             </p>
             <button onClick={generateNews} disabled={generating}
-              style={{ padding: '16px 32px', background: generating ? '#334155' : 'linear-gradient(135deg, #6366f1, #0ea5e9)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '16px', cursor: generating ? 'not-allowed' : 'pointer' }}>
+              style={{ padding: '16px 32px', background: generating ? '#334155' : 'linear-gradient(135deg,#6366f1,#0ea5e9)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '16px', cursor: generating ? 'not-allowed' : 'pointer' }}>
               {generating ? '⏳ AI Generate કરી રહ્યો છે...' : '✨ આજના સમાચાર Generate કરો'}
             </button>
           </div>
+
         ) : !quizMode && !done ? (
-          /* News view */
+          /* News View */
           <div>
-            {/* News Banner */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(14,165,233,0.2))', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '20px', padding: '24px', marginBottom: '20px' }}>
+            <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.3),rgba(14,165,233,0.2))', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '20px', padding: '24px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                 <span style={{ background: 'rgba(99,102,241,0.3)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', color: '#818cf8' }}>🔴 LIVE</span>
                 <span style={{ fontSize: '13px', color: '#94a3b8' }}>AI-Generated • Today</span>
               </div>
-              <h2 style={{ fontSize: '18px', fontWeight: '900', color: 'white', margin: '0 0 16px' }}>
-                📋 આજના મુખ્ય સમાચાર
-              </h2>
+              <h2 style={{ fontSize: '18px', fontWeight: '900', color: 'white', margin: '0 0 16px' }}>📋 આજના મુખ્ય સમાચાર</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {news.bullet_points?.map((point, i) => (
                   <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: '12px', borderLeft: '3px solid #6366f1' }}>
@@ -135,9 +213,8 @@ export default function CurrentAffairsPage() {
               </div>
             </div>
 
-            {/* Quiz CTA */}
             {news.quiz_questions?.length > 0 && (
-              <div style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: '20px', padding: '24px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: '20px', padding: '24px', textAlign: 'center', marginBottom: '16px' }}>
                 <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎯</div>
                 <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'white', marginBottom: '8px' }}>
                   આ સમાચારો પર Quiz આપો!
@@ -146,18 +223,18 @@ export default function CurrentAffairsPage() {
                   {news.quiz_questions.length} questions • Current Affairs practice
                 </p>
                 <button onClick={() => { setQuizMode(true); setCurrent(0); setScore(0); setSelected(null); setShowResult(false); setDone(false); }}
-                  style={{ padding: '14px 32px', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '16px', cursor: 'pointer' }}>
+                  style={{ padding: '14px 32px', background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '16px', cursor: 'pointer' }}>
                   🚀 Quiz શરૂ કરો
                 </button>
               </div>
             )}
 
-            {/* Refresh */}
             <button onClick={generateNews} disabled={generating}
-              style={{ width: '100%', marginTop: '16px', padding: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', color: '#475569', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
-              {generating ? '⏳ Refreshing...' : '🔄 નવા સમાચાર Generate કરો'}
+              style={{ width: '100%', padding: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', color: '#475569', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
+              {generating ? '⏳ Generating...' : '🔄 નવા સમાચાર Generate કરો'}
             </button>
           </div>
+
         ) : !done ? (
           /* Quiz Mode */
           <div>
@@ -166,7 +243,7 @@ export default function CurrentAffairsPage() {
               <span style={{ color: '#34d399' }}>Score: {score}</span>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '99px', height: '6px', marginBottom: '20px' }}>
-              <div style={{ background: 'linear-gradient(90deg, #6366f1, #0ea5e9)', height: '100%', borderRadius: '99px', width: `${((current + 1) / news.quiz_questions.length) * 100}%` }} />
+              <div style={{ background: 'linear-gradient(90deg,#6366f1,#0ea5e9)', height: '100%', borderRadius: '99px', width: `${((current + 1) / news.quiz_questions.length) * 100}%`, transition: 'width 0.3s' }} />
             </div>
 
             {(() => {
@@ -176,7 +253,8 @@ export default function CurrentAffairsPage() {
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
                     <p style={{ fontSize: '17px', fontWeight: '700', color: 'white', margin: 0, lineHeight: 1.6 }}>{q.question}</p>
                   </div>
-                  {['a', 'b', 'c', 'd'].map(opt => {
+
+                  {['a','b','c','d'].map(opt => {
                     const val = q[opt];
                     if (!val) return null;
                     const isSelected = selected === opt;
@@ -195,13 +273,22 @@ export default function CurrentAffairsPage() {
                           {opt.toUpperCase()}
                         </span>
                         <span style={{ color: '#e2e8f0', fontSize: '15px', flex: 1 }}>{val}</span>
-                        {icon && <span>{icon}</span>}
+                        {icon && <span style={{ fontSize: '16px' }}>{icon}</span>}
                       </button>
                     );
                   })}
+
+                  {/* Solution after answer */}
+                  {showResult && q.explanation && (
+                    <div style={{ background: 'rgba(251,191,36,0.1)', border: '2px solid #ca8a04', borderRadius: '12px', padding: '14px', marginBottom: '12px' }}>
+                      <div style={{ color: '#fbbf24', fontWeight: '800', fontSize: '13px', marginBottom: '4px' }}>💡 સ્પષ્ટીકરણ:</div>
+                      <div style={{ color: '#fef3c7', fontSize: '14px', lineHeight: 1.6 }}>{q.explanation}</div>
+                    </div>
+                  )}
+
                   {showResult && (
                     <button onClick={handleNext}
-                      style={{ width: '100%', marginTop: '8px', padding: '14px', background: 'linear-gradient(135deg, #6366f1, #0ea5e9)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '15px', cursor: 'pointer' }}>
+                      style={{ width: '100%', marginTop: '4px', padding: '14px', background: 'linear-gradient(135deg,#6366f1,#0ea5e9)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '15px', cursor: 'pointer' }}>
                       {current + 1 < news.quiz_questions.length ? 'આગળ →' : '🏁 Quiz પૂરી કરો'}
                     </button>
                   )}
@@ -209,19 +296,25 @@ export default function CurrentAffairsPage() {
               );
             })()}
           </div>
+
         ) : (
           /* Result */
           <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '40px' }}>
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>
               {score === news.quiz_questions.length ? '🏆' : score >= news.quiz_questions.length * 0.6 ? '🎯' : '💪'}
             </div>
-            <h2 style={{ fontSize: '26px', fontWeight: '900', color: 'white', marginBottom: '8px' }}>Current Affairs Quiz Done!</h2>
-            <div style={{ fontSize: '48px', fontWeight: '900', background: 'linear-gradient(90deg, #818cf8, #38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '16px 0' }}>
+            <h2 style={{ fontSize: '26px', fontWeight: '900', color: 'white', marginBottom: '8px' }}>
+              Current Affairs Done!
+            </h2>
+            <div style={{ fontSize: '48px', fontWeight: '900', background: 'linear-gradient(90deg,#818cf8,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '16px 0' }}>
               {score}/{news.quiz_questions.length}
             </div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <p style={{ color: '#64748b', marginBottom: '24px' }}>
+              {score === news.quiz_questions.length ? 'Perfect! બધા સાચા!' : score >= news.quiz_questions.length * 0.6 ? 'સારું! Keep it up!' : 'વધુ વાંચો, practice કરો!'}
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => { setQuizMode(false); setDone(false); }}
-                style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg, #6366f1, #0ea5e9)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg,#6366f1,#0ea5e9)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', cursor: 'pointer' }}>
                 📰 News જુઓ
               </button>
               <button onClick={() => router.push('/')}
@@ -231,6 +324,7 @@ export default function CurrentAffairsPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
