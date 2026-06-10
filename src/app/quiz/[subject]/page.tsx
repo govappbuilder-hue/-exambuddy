@@ -46,11 +46,32 @@ export default function QuizPage() {
   const [selected, setSelected] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [scoreSaved, setScoreSaved] = useState(false);
+
+  const score = questions.reduce((acc, q, i) =>
+    selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+  const percent = questions.length ? Math.round((score / questions.length) * 100) : 0;
+
+  // ✅ Score Save Function
+  const saveScore = useCallback(async (finalScore: number, totalQ: number) => {
+    if (scoreSaved) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from('user_scores').insert({
+        user_id: user.id,
+        score: finalScore,
+        total_questions: totalQ,
+        topic: SUBJECT_NAMES[subject] || subject,
+      });
+      setScoreSaved(true);
+    } catch (e) {
+      console.error('Score save error:', e);
+    }
+  }, [subject, scoreSaved]);
 
   const startQuiz = async () => {
     setLoading(true);
-
-    // Fetch more than needed then shuffle - fixes repeat problem
     const fetchLimit = Math.min(totalMarks * 3, 300);
     const { data, error } = await supabase
       .from('questions')
@@ -65,22 +86,27 @@ export default function QuizPage() {
       return;
     }
 
-    // Proper shuffle using Fisher-Yates
+    // Fisher-Yates shuffle
     const arr = [...data];
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
 
-    const final = arr.slice(0, totalMarks);
-    setQuestions(final);
+    setQuestions(arr.slice(0, totalMarks));
     setTimeLeft(totalMarks * 60);
     setCurrent(0);
     setSelected({});
+    setScoreSaved(false);
     setScreen('quiz');
   };
 
-  const submitQuiz = useCallback(() => setScreen('result'), []);
+  const submitQuiz = useCallback(() => {
+    const finalScore = questions.reduce((acc, q, i) =>
+      selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+    saveScore(finalScore, questions.length);
+    setScreen('result');
+  }, [questions, selected, saveScore]);
 
   useEffect(() => {
     if (screen !== 'quiz') return;
@@ -93,9 +119,6 @@ export default function QuizPage() {
     return () => clearInterval(t);
   }, [screen, submitQuiz]);
 
-  const score = questions.reduce((acc, q, i) =>
-    selected[i] === q.correct_answer ? acc + 1 : acc, 0);
-  const percent = questions.length ? Math.round((score / questions.length) * 100) : 0;
   const mm = String(Math.floor(timeLeft / 60)).padStart(2, '0');
   const ss = String(timeLeft % 60).padStart(2, '0');
   const timerRed = timeLeft < 60;
@@ -144,20 +167,15 @@ export default function QuizPage() {
 
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a', fontFamily: 'system-ui', color: 'white' }}>
-
-        {/* Top Bar */}
         <div style={{ background: '#1e293b', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid #334155' }}>
           <button onClick={() => router.push('/')}
-            style={{ background: '#334155', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '13px' }}>
-            ← Home
-          </button>
+            style={{ background: '#334155', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '13px' }}>← Home</button>
           <div style={{ fontWeight: '800', fontSize: '14px' }}>{SUBJECT_NAMES[subject] || subject}</div>
-          <div style={{ background: timerRed ? '#ef444420' : '#10b98120', border: `2px solid ${timerRed ? '#ef4444' : '#10b981'}`, borderRadius: '10px', padding: '5px 12px', color: timerRed ? '#ef4444' : '#10b981', fontWeight: '900', fontSize: '17px', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ background: timerRed ? '#ef444420' : '#10b98120', border: `2px solid ${timerRed ? '#ef4444' : '#10b981'}`, borderRadius: '10px', padding: '5px 12px', color: timerRed ? '#ef4444' : '#10b981', fontWeight: '900', fontSize: '17px' }}>
             ⏱ {mm}:{ss}
           </div>
         </div>
 
-        {/* Progress */}
         <div style={{ background: '#1e293b', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
           <span>પ્રશ્ન {current + 1} / {questions.length}</span>
           <span style={{ color: '#10b981', fontWeight: '700' }}>Score: {score}</span>
@@ -167,93 +185,58 @@ export default function QuizPage() {
         </div>
 
         <div style={{ maxWidth: '640px', margin: '0 auto', padding: '18px 16px' }}>
-
-          {/* Question Box */}
           <div style={{ background: '#1e293b', borderRadius: '14px', padding: '20px', marginBottom: '14px', border: '1px solid #334155' }}>
             <div style={{ fontSize: '11px', color: '#818cf8', fontWeight: '700', letterSpacing: '1px', marginBottom: '10px', textTransform: 'uppercase' }}>
-              {subject} • Question {current + 1}
+              {subject} • Q{current + 1}
             </div>
-            <p style={{ fontSize: '16px', fontWeight: '600', margin: 0, lineHeight: 1.7, color: 'white' }}>
-              {q.question}
-            </p>
+            <p style={{ fontSize: '16px', fontWeight: '600', margin: 0, lineHeight: 1.7, color: 'white' }}>{q.question}</p>
           </div>
 
-          {/* Options */}
           {OPTIONS.map(opt => {
             const val = q[`option_${opt.toLowerCase()}` as keyof Question] as string;
             const isSelected = answered === opt;
             const isCorrect = opt === q.correct_answer;
             const showResult = !!answered;
-
-            let bg = '#1e293b';
-            let border = '#334155';
-            let rightIcon = null;
-
+            let bg = '#1e293b', border = '#334155', rightIcon = null as string | null;
             if (showResult) {
-              if (isCorrect) {
-                bg = '#064e3b';
-                border = '#10b981';
-                rightIcon = '✅';
-              } else if (isSelected) {
-                bg = '#450a0a';
-                border = '#ef4444';
-                rightIcon = '❌';
-              }
-            } else if (isSelected) {
-              bg = '#1e3a5f';
-              border = '#3b82f6';
-            }
-
+              if (isCorrect) { bg = '#064e3b'; border = '#10b981'; rightIcon = '✅'; }
+              else if (isSelected) { bg = '#450a0a'; border = '#ef4444'; rightIcon = '❌'; }
+            } else if (isSelected) { bg = '#1e3a5f'; border = '#3b82f6'; }
             return (
               <button key={opt}
                 onClick={() => { if (!answered) setSelected(p => ({ ...p, [current]: opt })); }}
                 style={{ width: '100%', marginBottom: '10px', padding: '14px 16px', borderRadius: '12px', border: `2px solid ${border}`, background: bg, cursor: answered ? 'default' : 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', transition: 'all 0.15s' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: showResult && isCorrect ? '#10b981' : showResult && isSelected ? '#ef4444' : '#334155', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px', flexShrink: 0 }}>
-                  {opt}
-                </div>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: showResult && isCorrect ? '#10b981' : showResult && isSelected ? '#ef4444' : '#334155', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px', flexShrink: 0 }}>{opt}</div>
                 <span style={{ fontSize: '15px', color: '#e2e8f0', flex: 1, lineHeight: 1.4 }}>{val}</span>
                 {rightIcon && <span style={{ fontSize: '18px', flexShrink: 0 }}>{rightIcon}</span>}
               </button>
             );
           })}
 
-          {/* ✅ Solution Box - shows after answer */}
           {answered && (
             <div style={{ marginBottom: '12px' }}>
               {q.explanation ? (
                 <div style={{ background: '#1c1a00', border: '2px solid #ca8a04', borderRadius: '12px', padding: '14px' }}>
-                  <div style={{ color: '#fbbf24', fontWeight: '800', fontSize: '13px', marginBottom: '6px' }}>
-                    💡 સ્પષ્ટીકરણ:
-                  </div>
-                  <div style={{ color: '#fef3c7', fontSize: '14px', lineHeight: 1.7 }}>
-                    {q.explanation}
-                  </div>
+                  <div style={{ color: '#fbbf24', fontWeight: '800', fontSize: '13px', marginBottom: '6px' }}>💡 સ્પષ્ટીકરણ:</div>
+                  <div style={{ color: '#fef3c7', fontSize: '14px', lineHeight: 1.7 }}>{q.explanation}</div>
                 </div>
               ) : (
                 <div style={{ background: '#064e3b', border: '2px solid #10b981', borderRadius: '12px', padding: '12px', color: '#6ee7b7', fontSize: '14px', fontWeight: '700' }}>
-                  ✅ સાચો જવાબ: વિકલ્પ {q.correct_answer} —{' '}
-                  {q[`option_${q.correct_answer.toLowerCase()}` as keyof Question] as string}
+                  ✅ સાચો જવાબ: વિકલ્પ {q.correct_answer} — {q[`option_${q.correct_answer.toLowerCase()}` as keyof Question] as string}
                 </div>
               )}
             </div>
           )}
 
-          {/* Navigation */}
           <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
             <button onClick={() => setCurrent(p => Math.max(0, p - 1))} disabled={current === 0}
-              style={{ flex: 1, padding: '13px', borderRadius: '12px', border: '2px solid #334155', background: current === 0 ? '#0f172a' : '#1e293b', color: current === 0 ? '#475569' : '#e2e8f0', fontWeight: '700', cursor: current === 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
-              ← પાછળ
-            </button>
+              style={{ flex: 1, padding: '13px', borderRadius: '12px', border: '2px solid #334155', background: current === 0 ? '#0f172a' : '#1e293b', color: current === 0 ? '#475569' : '#e2e8f0', fontWeight: '700', cursor: current === 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}>← પાછળ</button>
             {current < questions.length - 1 ? (
               <button onClick={() => setCurrent(p => p + 1)}
-                style={{ flex: 2, padding: '13px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#667eea,#764ba2)', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}>
-                આગળ →
-              </button>
+                style={{ flex: 2, padding: '13px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#667eea,#764ba2)', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}>આગળ →</button>
             ) : (
               <button onClick={submitQuiz}
-                style={{ flex: 2, padding: '13px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}>
-                ✅ સબમિટ
-              </button>
+                style={{ flex: 2, padding: '13px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}>✅ સબમિટ</button>
             )}
           </div>
 
@@ -272,12 +255,9 @@ export default function QuizPage() {
   if (screen === 'result') {
     const wrong = questions.length - score;
     const unanswered = questions.length - Object.keys(selected).length;
-
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#667eea,#764ba2)', padding: '20px', fontFamily: 'system-ui' }}>
         <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-
-          {/* Score Card */}
           <div style={{ background: 'white', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '16px', boxShadow: '0 25px 50px rgba(0,0,0,0.2)' }}>
             <div style={{ fontSize: '60px', marginBottom: '10px' }}>
               {percent >= 80 ? '🏆' : percent >= 60 ? '👍' : percent >= 40 ? '📚' : '💪'}
@@ -289,6 +269,12 @@ export default function QuizPage() {
               {score}/{questions.length}
             </div>
             <div style={{ fontSize: '18px', color: '#6b7280', marginBottom: '20px' }}>{percent}% સાચા</div>
+
+            {scoreSaved && (
+              <div style={{ background: '#dcfce7', color: '#166534', padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', marginBottom: '16px' }}>
+                ✅ Score saved to your progress!
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '22px' }}>
               {[
@@ -303,9 +289,13 @@ export default function QuizPage() {
               ))}
             </div>
 
-            <button onClick={() => { setScreen('setup'); setSelected({}); setCurrent(0); }}
+            <button onClick={() => { setScreen('setup'); setSelected({}); setCurrent(0); setScoreSaved(false); }}
               style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#667eea,#764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginBottom: '10px' }}>
               🔄 ફરીથી આપો
+            </button>
+            <button onClick={() => router.push('/my-progress')}
+              style={{ width: '100%', padding: '12px', background: '#f0fdf4', color: '#166534', border: '2px solid #86efac', borderRadius: '12px', cursor: 'pointer', fontSize: '14px', fontWeight: '700', marginBottom: '10px' }}>
+              📊 My Progress જુઓ
             </button>
             <button onClick={() => router.push('/')}
               style={{ width: '100%', padding: '12px', background: 'transparent', color: '#6b7280', border: '2px solid #e5e7eb', borderRadius: '12px', cursor: 'pointer', fontSize: '14px' }}>
@@ -313,7 +303,6 @@ export default function QuizPage() {
             </button>
           </div>
 
-          {/* Answer Review */}
           <div style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#1e1b4b', marginBottom: '14px' }}>📋 જવાબ સમીક્ષા</h3>
             {questions.map((q, i) => {
@@ -345,7 +334,6 @@ export default function QuizPage() {
               );
             })}
           </div>
-
         </div>
       </div>
     );
