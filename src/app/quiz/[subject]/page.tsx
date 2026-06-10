@@ -1,34 +1,37 @@
 'use client';
-
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
 
-const SUBJECT_MAP: Record<string, { dbName: string; displayName: string }> = {
-  gujarati_sahitya: { dbName: 'ગુજરાતી સાહિત્ય', displayName: '✍️ ગુજરાતી સાહિત્ય' },
-  gujarati_vyakran: { dbName: 'ગુજરાતી વ્યાકરણ', displayName: '📝 ગુજરાતી વ્યાકરણ' },
-  maths: { dbName: 'ગણિત', displayName: '🔢 ગણિત' },
-  constitution: { dbName: 'ભારતનું બંધારણ', displayName: '📜 ભારતનું બંધારણ' },
-  history: { dbName: 'ઇતિહાસ', displayName: '🏛️ ગુજરાતનો ઇતિહાસ' },
-  geography: { dbName: 'ભૂગોળ', displayName: '🌍 ભૂગોળ' },
-  science: { dbName: 'વિજ્ઞાન', displayName: '🔬 સામાન્ય વિજ્ઞાન' },
-  computer: { dbName: 'કમ્પ્યૂટર', displayName: '💻 કમ્પ્યૂટર જ્ઞાન' },
-  reasoning: { dbName: 'રીઝનિંગ', displayName: '🧩 રીઝનિંગ' },
-  english: { dbName: 'English', displayName: '🔤 English Grammar' },
-  law: { dbName: 'કાયદો', displayName: '⚖️ કાયદો' },
-  gk: { dbName: 'સામાન્ય જ્ઞાન', displayName: '💡 સામાન્ય જ્ઞાન' },
-  current_affairs: { dbName: 'કરંટ અફેર્સ', displayName: '📰 કરંટ અફેર્સ' },
-  heritage: { dbName: 'સાંસ્કૃતિક વારસો', displayName: '🏛️ સાંસ્કૃતિક વારસો' },
-  economics: { dbName: 'અર્થશાસ્ત્ર', displayName: '📈 અર્થશાસ્ત્ર' },
-  pub_ad: { dbName: 'જાहेर વહીવટ', displayName: '🏢 જાહેર વહીવટ' }
+const SUBJECT_NAMES: Record<string, string> = {
+  maths: '🔢 ગણિત',
+  constitution: '📜 બંધારણ',
+  history: '🏛️ ઇતિહાસ',
+  geography: '🌍 ભૂગોળ',
+  science: '🔬 વિજ્ઞાન',
+  gujarati: '✍️ ગુજરાતી',
+  computer: '💻 કમ્પ્યૂટર',
+  reasoning: '🧩 રીઝનિંગ',
+  english: '🔤 English',
+  'current-affairs': '📰 કરંટ અફેર્સ',
+  gujarati_sahitya: '📖 ગુજ. સાહિત્ય',
+  gujarati_vyakran: '📝 ગુજ. વ્યાકરણ',
+  law: '⚖️ કાયદો',
+  gk: '💡 સામાન્ય જ્ઞાન',
+  economics: '📈 અર્થશાસ્ત્ર',
+  heritage: '🏺 વારસો',
+  pub_ad: '🏢 જાહેર વહીવટ',
+  general: '💡 સામાન્ય જ્ઞાન',
+  polity: '🏛️ રાજ્યશાસ્ત્ર',
+  current_affairs: '📰 Current Affairs',
 };
 
-interface Question {
+type Question = {
   id: string;
   question: string;
   option_a: string;
@@ -37,20 +40,16 @@ interface Question {
   option_d: string;
   correct_answer: string;
   explanation?: string;
-}
+};
 
-type ScreenType = 'setup' | 'quiz' | 'result';
+type Screen = 'setup' | 'quiz' | 'result';
 
-interface PageProps {
-  params: any;
-}
-
-export default function QuizPage({ params }: PageProps) {
+export default function QuizPage() {
   const router = useRouter();
-  
-  const [routeSubject, setRouteSubject] = useState<string>("");
-  const [isParamsReady, setIsParamsReady] = useState(false); // નવું પ્રોટેક્શન સ્ટેટ
-  const [screen, setScreen] = useState<ScreenType>('setup');
+  const params = useParams();
+  const subject = (params?.subject as string) || '';
+
+  const [screen, setScreen] = useState<Screen>('setup');
   const [totalMarks, setTotalMarks] = useState(50);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [current, setCurrent] = useState(0);
@@ -58,58 +57,32 @@ export default function QuizPage({ params }: PageProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // URL Params ને સેફલી લોડ કરવાનો ૧૦૦% સાચો રસ્તો
-  useEffect(() => {
-    if (params) {
-      Promise.resolve(params)
-        .then((res) => {
-          if (res && res.subject) {
-            setRouteSubject(res.subject);
-          }
-          setIsParamsReady(true); // ડેટા મળી ગયો એટલે સિગ્નલ ગ્રીન
-        })
-        .catch((err) => {
-          console.error(err);
-          setIsParamsReady(true);
-        });
-    } else {
-      setIsParamsReady(true);
-    }
-  }, [params]);
-
-  const subjectConfig = SUBJECT_MAP[routeSubject] || { dbName: routeSubject, displayName: routeSubject };
-  const questionCount = totalMarks;
-  const timeSeconds = totalMarks * 60;
-
   const startQuiz = async () => {
-    if (!subjectConfig.dbName) return;
     setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('subject', subjectConfig.dbName)
-        .limit(questionCount);
+    const { data, error } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('subject', subject)
+      .limit(500);
+    setLoading(false);
 
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        alert(`"${subjectConfig.dbName}" વિષયના પ્રશ્નો મળ્યા નથી!`);
-        return;
-      }
-
-      const shuffled = [...data].sort(() => Math.random() - 0.5);
-      setQuestions(shuffled);
-      setTimeLeft(timeSeconds);
-      setCurrent(0);
-      setSelected({});
-      setScreen('quiz');
-    } catch (err) {
-      console.error(err);
-      alert('ડેટા લોડ કરવામાં ભૂલ આવી!');
-    } finally {
-      setLoading(false);
+    if (error || !data?.length) {
+      alert('સવાલ મળ્યા નહીં! Admin થી ઉમેરો.');
+      return;
     }
+
+    // Fisher-Yates shuffle
+    const arr = [...data];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+
+    setQuestions(arr.slice(0, totalMarks));
+    setTimeLeft(totalMarks * 60);
+    setCurrent(0);
+    setSelected({});
+    setScreen('quiz');
   };
 
   const submitQuiz = useCallback(() => setScreen('result'), []);
@@ -118,221 +91,456 @@ export default function QuizPage({ params }: PageProps) {
     if (screen !== 'quiz') return;
     const t = setInterval(() => {
       setTimeLeft(p => {
-        if (p <= 1) {
-          clearInterval(t);
-          submitQuiz();
-          return 0;
-        }
+        if (p <= 1) { clearInterval(t); submitQuiz(); return 0; }
         return p - 1;
       });
     }, 1000);
     return () => clearInterval(t);
   }, [screen, submitQuiz]);
 
-  const correctCount = questions.reduce((acc, q, i) => selected[i] === q.correct_answer ? acc + 1 : acc, 0);
-  const attemptedCount = Object.keys(selected).length;
-  const wrongCount = attemptedCount - correctCount;
-  const negativeMarks = wrongCount * 0.25;
-  const finalScore = parseFloat((correctCount - negativeMarks).toFixed(2));
-
+  const score = questions.reduce((acc, q, i) =>
+    selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+  const percent = questions.length
+    ? Math.round((score / questions.length) * 100)
+    : 0;
   const mm = String(Math.floor(timeLeft / 60)).padStart(2, '0');
   const ss = String(timeLeft % 60).padStart(2, '0');
-  const timerColor = timeLeft < 60 ? '#ef4444' : timeLeft < 300 ? '#fbbf24' : '#34d399';
+  const timerRed = timeLeft < 60;
+  const subjectName = SUBJECT_NAMES[subject] || subject;
 
-  // જ્યાં સુધી URL ના ડેટા ન લોડ થાય ત્યાં સુધી બ્લેન્ક નહિ પણ મસ્ત લોડિંગ સ્ક્રીન દેખાશે
-  if (!isParamsReady) {
+  /* ═══════════════ SETUP SCREEN ═══════════════ */
+  if (screen === 'setup') return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '20px', fontFamily: 'system-ui'
+    }}>
+      <div style={{
+        background: 'white', borderRadius: '24px', padding: '36px',
+        maxWidth: '400px', width: '100%', textAlign: 'center',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.2)'
+      }}>
+        <div style={{ fontSize: '56px', marginBottom: '12px' }}>📝</div>
+        <h1 style={{
+          fontSize: '24px', fontWeight: '900',
+          color: '#1e1b4b', marginBottom: '6px', margin: '0 0 6px'
+        }}>
+          {subjectName}
+        </h1>
+        <p style={{ color: '#6b7280', marginBottom: '28px', fontSize: '14px' }}>
+          કેટલા માર્ક્સ નો ટેસ્ટ?
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
+          {[
+            { marks: 50, label: '50 માર્ક્સ', sub: '50 સવાલ • 50 મિનિટ', color: '#10b981' },
+            { marks: 100, label: '100 માર્ક્સ', sub: '100 સવાલ • 100 મિનિટ', color: '#3b82f6' },
+            { marks: 200, label: '200 માર્ક્સ', sub: '200 સવાલ • 200 મિનિટ', color: '#8b5cf6' },
+          ].map(opt => (
+            <button key={opt.marks} onClick={() => setTotalMarks(opt.marks)}
+              style={{
+                padding: '14px', borderRadius: '12px',
+                border: `3px solid ${totalMarks === opt.marks ? opt.color : '#e5e7eb'}`,
+                background: totalMarks === opt.marks ? opt.color + '18' : 'white',
+                cursor: 'pointer', transition: 'all 0.2s'
+              }}>
+              <div style={{
+                fontWeight: '800', fontSize: '17px',
+                color: totalMarks === opt.marks ? opt.color : '#374151'
+              }}>{opt.label}</div>
+              <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>
+                {opt.sub}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <button onClick={startQuiz} disabled={loading} style={{
+          width: '100%', padding: '15px',
+          background: loading
+            ? '#94a3b8'
+            : 'linear-gradient(135deg,#667eea,#764ba2)',
+          color: 'white', border: 'none', borderRadius: '12px',
+          fontSize: '17px', fontWeight: '900',
+          cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '10px'
+        }}>
+          {loading ? '⏳ લોડ...' : '🚀 ક્વિઝ શરૂ કરો'}
+        </button>
+
+        <button onClick={() => router.push('/')} style={{
+          width: '100%', padding: '12px', background: 'transparent',
+          color: '#6b7280', border: '2px solid #e5e7eb',
+          borderRadius: '12px', cursor: 'pointer', fontSize: '14px'
+        }}>
+          ← પાછા જાઓ
+        </button>
+      </div>
+    </div>
+  );
+
+  /* ═══════════════ QUIZ SCREEN ═══════════════ */
+  const q = questions[current];
+  if (screen === 'quiz' && q) {
+    const answered = selected[current];
+    const OPTIONS = ['A', 'B', 'C', 'D'] as const;
+
     return (
-      <div className="min-h-screen bg-[#0f172a] text-slate-100 flex items-center justify-center font-sans">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-400 font-bold">વિષય લોડ થઈ રહ્યો છે...</p>
+      <div style={{
+        minHeight: '100vh', background: '#0f172a',
+        fontFamily: 'system-ui', color: 'white'
+      }}>
+
+        {/* ── Top Bar ── */}
+        <div style={{
+          background: '#1e293b', padding: '12px 16px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          position: 'sticky', top: 0, zIndex: 100,
+          borderBottom: '1px solid #334155'
+        }}>
+          <button onClick={() => router.push('/')} style={{
+            background: '#334155', color: 'white', border: 'none',
+            borderRadius: '8px', padding: '6px 12px',
+            cursor: 'pointer', fontSize: '13px'
+          }}>← Home</button>
+
+          <div style={{ fontWeight: '800', fontSize: '14px' }}>{subjectName}</div>
+
+          <div style={{
+            background: timerRed ? '#ef444420' : '#10b98120',
+            border: `2px solid ${timerRed ? '#ef4444' : '#10b981'}`,
+            borderRadius: '10px', padding: '5px 12px',
+            color: timerRed ? '#ef4444' : '#10b981',
+            fontWeight: '900', fontSize: '17px',
+            fontVariantNumeric: 'tabular-nums'
+          }}>⏱ {mm}:{ss}</div>
+        </div>
+
+        {/* ── Progress Bar ── */}
+        <div style={{
+          background: '#1e293b', padding: '8px 16px',
+          display: 'flex', justifyContent: 'space-between',
+          fontSize: '13px', color: '#94a3b8',
+          borderBottom: '1px solid #334155'
+        }}>
+          <span>પ્રશ્ન {current + 1} / {questions.length}</span>
+          <span style={{ color: '#10b981', fontWeight: '700' }}>
+            Score: {score}
+          </span>
+        </div>
+        <div style={{ height: '3px', background: '#334155' }}>
+          <div style={{
+            height: '100%',
+            background: 'linear-gradient(90deg,#667eea,#764ba2)',
+            width: `${((current + 1) / questions.length) * 100}%`,
+            transition: 'width 0.3s'
+          }} />
+        </div>
+
+        {/* ── Content ── */}
+        <div style={{ maxWidth: '640px', margin: '0 auto', padding: '18px 16px' }}>
+
+          {/* Question */}
+          <div style={{
+            background: '#1e293b', borderRadius: '14px',
+            padding: '20px', marginBottom: '14px',
+            border: '1px solid #334155'
+          }}>
+            <div style={{
+              fontSize: '11px', color: '#818cf8', fontWeight: '700',
+              letterSpacing: '1px', marginBottom: '10px', textTransform: 'uppercase'
+            }}>
+              {subject.toUpperCase()} • QUESTION {current + 1}
+            </div>
+            <p style={{
+              fontSize: '16px', fontWeight: '600', margin: 0,
+              lineHeight: 1.7, color: 'white'
+            }}>{q.question}</p>
+          </div>
+
+          {/* Options */}
+          {OPTIONS.map(opt => {
+            const val = q[`option_${opt.toLowerCase()}` as keyof Question] as string;
+            const isSelected = answered === opt;
+            const isCorrect = opt === q.correct_answer;
+            const showResult = !!answered;
+
+            let bg = '#1e293b';
+            let border = '#334155';
+            let icon: string | null = null;
+
+            if (showResult) {
+              if (isCorrect) { bg = '#064e3b'; border = '#10b981'; icon = '✅'; }
+              else if (isSelected) { bg = '#450a0a'; border = '#ef4444'; icon = '❌'; }
+            } else if (isSelected) {
+              bg = '#1e3a5f'; border = '#3b82f6';
+            }
+
+            return (
+              <button key={opt}
+                onClick={() => {
+                  if (!answered) setSelected(p => ({ ...p, [current]: opt }));
+                }}
+                style={{
+                  width: '100%', marginBottom: '10px',
+                  padding: '14px 16px', borderRadius: '12px',
+                  border: `2px solid ${border}`, background: bg,
+                  cursor: answered ? 'default' : 'pointer',
+                  textAlign: 'left', display: 'flex',
+                  alignItems: 'center', gap: '12px',
+                  transition: 'all 0.15s'
+                }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  background: showResult && isCorrect
+                    ? '#10b981'
+                    : showResult && isSelected
+                      ? '#ef4444'
+                      : '#334155',
+                  color: 'white',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: '900', fontSize: '14px', flexShrink: 0
+                }}>{opt}</div>
+                <span style={{
+                  fontSize: '15px', color: '#e2e8f0',
+                  flex: 1, lineHeight: 1.4
+                }}>{val}</span>
+                {icon && (
+                  <span style={{ fontSize: '18px', flexShrink: 0 }}>{icon}</span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Solution Box */}
+          {answered && (
+            <div style={{ marginBottom: '12px' }}>
+              {q.explanation ? (
+                <div style={{
+                  background: '#1c1a00',
+                  border: '2px solid #ca8a04',
+                  borderRadius: '12px', padding: '14px'
+                }}>
+                  <div style={{
+                    color: '#fbbf24', fontWeight: '800',
+                    fontSize: '13px', marginBottom: '6px'
+                  }}>💡 સ્પષ્ટીકરણ:</div>
+                  <div style={{
+                    color: '#fef3c7', fontSize: '14px', lineHeight: 1.7
+                  }}>{q.explanation}</div>
+                </div>
+              ) : (
+                <div style={{
+                  background: '#064e3b', border: '2px solid #10b981',
+                  borderRadius: '12px', padding: '12px',
+                  color: '#6ee7b7', fontSize: '14px', fontWeight: '700'
+                }}>
+                  ✅ સાચો જવાબ: વિકલ્પ {q.correct_answer} —{' '}
+                  {q[`option_${q.correct_answer.toLowerCase()}` as keyof Question] as string}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+            <button
+              onClick={() => setCurrent(p => Math.max(0, p - 1))}
+              disabled={current === 0}
+              style={{
+                flex: 1, padding: '13px', borderRadius: '12px',
+                border: '2px solid #334155',
+                background: current === 0 ? '#0f172a' : '#1e293b',
+                color: current === 0 ? '#475569' : '#e2e8f0',
+                fontWeight: '700',
+                cursor: current === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '14px'
+              }}>← પાછળ</button>
+
+            {current < questions.length - 1 ? (
+              <button onClick={() => setCurrent(p => p + 1)} style={{
+                flex: 2, padding: '13px', borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg,#667eea,#764ba2)',
+                color: 'white', fontWeight: '800',
+                cursor: 'pointer', fontSize: '15px'
+              }}>આગળ →</button>
+            ) : (
+              <button onClick={submitQuiz} style={{
+                flex: 2, padding: '13px', borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg,#10b981,#059669)',
+                color: 'white', fontWeight: '800',
+                cursor: 'pointer', fontSize: '15px'
+              }}>✅ સબમિટ</button>
+            )}
+          </div>
+
+          {current < questions.length - 1 && (
+            <button onClick={submitQuiz} style={{
+              width: '100%', marginTop: '10px', padding: '10px',
+              background: 'transparent',
+              border: '2px solid #334155', borderRadius: '10px',
+              color: '#94a3b8', fontSize: '13px', cursor: 'pointer'
+            }}>
+              🏁 હવે સબમિટ ({Object.keys(selected).length}/{questions.length} answered)
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  // 1️⃣ SETUP SCREEN
-  if (screen === 'setup') return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex items-center justify-center p-4 font-sans relative overflow-hidden">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 max-w-md w-100 text-center shadow-2xl relative z-10">
-        <div className="text-5xl mb-4 animate-bounce">📝</div>
-        <h1 className="text-3xl font-black text-white mb-2 tracking-wide">{subjectConfig.displayName}</h1>
-        <p className="text-slate-400 mb-8 text-sm font-medium">ટેસ્ટ માટે પ્રશ્નોની સંખ્યા પસંદ કરો</p>
+  /* ═══════════════ RESULT SCREEN ═══════════════ */
+  if (screen === 'result') {
+    const wrong = questions.length - score;
+    const unanswered = questions.length - Object.keys(selected).length;
 
-        <div className="flex flex-col gap-3 mb-8">
-          {[
-            { marks: 50, label: '50 માર્ક્સ', sub: '50 સવાલ • 50 મિનิต (0.25 નેગેટિવ)', color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' },
-            { marks: 100, label: '100 માર્ક્સ', sub: '100 સવાલ • 100 મિનિટ (0.25 નેગેટિવ)', color: 'border-blue-500/30 text-blue-400 bg-blue-500/5' },
-            { marks: 200, label: '200 માર્ક્સ', sub: '200 સવાલ • 200 મિનિટ (0.25 નેગેટિવ)', color: 'border-violet-500/30 text-violet-400 bg-violet-500/5' },
-          ].map(opt => {
-            const isSelected = totalMarks === opt.marks;
-            return (
-              <button key={opt.marks} onClick={() => setTotalMarks(opt.marks)}
-                className={`p-4 rounded-2xl border text-left transition-all duration-200 ${isSelected ? opt.color + ' border-2 scale-[1.02]' : 'border-slate-800 bg-slate-950/40 text-slate-300 hover:border-slate-700'}`}>
-                <div className="font-extrabold text-lg">{opt.label}</div>
-                <div className="text-xs text-slate-500 mt-0.5 font-medium">{opt.sub}</div>
-              </button>
-            );
-          })}
-        </div>
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg,#667eea,#764ba2)',
+        padding: '20px', fontFamily: 'system-ui'
+      }}>
+        <div style={{ maxWidth: '500px', margin: '0 auto' }}>
 
-        <button onClick={startQuiz} disabled={loading}
-          className="w-full py-4 bg-gradient-to-r from-violet-600 to-blue-600 text-white font-black rounded-2xl text-lg shadow-lg hover:opacity-90 transition-all disabled:opacity-50">
-          {loading ? '⏳ લોડ થઈ રહ્યું છે...' : '🚀 ક્વિઝ શરૂ કરો'}
-        </button>
-        <button onClick={() => router.push('/')}
-          className="w-full mt-3 py-3 border border-slate-800 rounded-2xl text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all">
-          ← મુખ્ય પેજ
-        </button>
-      </div>
-    </div>
-  );
+          {/* Score Card */}
+          <div style={{
+            background: 'white', borderRadius: '24px',
+            padding: '32px', textAlign: 'center',
+            marginBottom: '16px',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ fontSize: '60px', marginBottom: '10px' }}>
+              {percent >= 80 ? '🏆' : percent >= 60 ? '👍' : percent >= 40 ? '📚' : '💪'}
+            </div>
+            <h2 style={{
+              fontSize: '24px', fontWeight: '900',
+              color: '#1e1b4b', margin: '0 0 4px'
+            }}>
+              {percent >= 80 ? 'શ્રેષ્ઠ!' : percent >= 60 ? 'સારું!' : percent >= 40 ? 'ઠીક છે' : 'વધુ પ્રેક્ટિસ!'}
+            </h2>
+            <div style={{
+              fontSize: '44px', fontWeight: '900',
+              color: percent >= 60 ? '#10b981' : '#ef4444',
+              margin: '14px 0 6px'
+            }}>{score}/{questions.length}</div>
+            <div style={{ fontSize: '18px', color: '#6b7280', marginBottom: '20px' }}>
+              {percent}% સાચા
+            </div>
 
-  // 2️⃣ QUIZ SCREEN
-  const q = questions[current];
-  const hasAnswered = selected[current] !== undefined;
-
-  if (screen === 'quiz' && q) return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 font-sans">
-      <div className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <div className="text-sm font-bold bg-slate-800 px-3 py-1.5 rounded-full text-slate-300">
-          પ્રશ્ન: {current + 1} / {questions.length}
-        </div>
-        <div style={{ color: timerColor }} className="bg-slate-950/60 border border-slate-800 rounded-full px-5 py-1.5 font-black text-xl tracking-wider">
-          ⏱ {mm}:{ss}
-        </div>
-        <button onClick={submitQuiz}
-          className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 px-4 py-2 rounded-xl text-xs font-black transition-all">
-          સબમિટ
-        </button>
-      </div>
-
-      <div className="h-1.5 bg-slate-950 w-full">
-        <div className="h-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all duration-300" style={{ width: `${((current + 1) / questions.length) * 100}%` }} />
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 sm:p-8 mb-6 shadow-xl">
-          <div className="text-xs font-bold text-violet-400 uppercase tracking-widest mb-3">CCE / GPSC LEVEL MCQ</div>
-          <p className="text-lg sm:text-xl font-bold leading-relaxed text-white">{q.question}</p>
-        </div>
-
-        <div className="space-y-3">
-          {['A','B','C','D'].map(opt => {
-            const optKey = `option_${opt.toLowerCase()}` as keyof Question;
-            const val = q[optKey] as string;
-            
-            const isCurrentSelection = selected[current] === opt;
-            const isCorrectAnswer = q.correct_answer === opt;
-
-            let buttonStyle = "border-slate-800 bg-slate-900/40 text-slate-300 hover:border-slate-700";
-            let badgeStyle = "bg-slate-800 text-slate-400";
-
-            if (hasAnswered) {
-              if (isCorrectAnswer) {
-                buttonStyle = "border-emerald-500 bg-emerald-500/20 text-emerald-200 font-bold shadow-lg";
-                badgeStyle = "bg-emerald-500 text-white";
-              } else if (isCurrentSelection) {
-                buttonStyle = "border-red-500 bg-red-500/20 text-red-200 font-bold shadow-lg";
-                badgeStyle = "bg-red-500 text-white";
-              } else {
-                buttonStyle = "border-slate-900 bg-slate-900/10 text-slate-500 opacity-60";
-              }
-            }
-
-            return (
-              <button key={opt} 
-                onClick={() => { if (!hasAnswered) setSelected(p => ({...p, [current]: opt})); }}
-                disabled={hasAnswered}
-                className={`w-full p-4 sm:p-5 rounded-2xl border text-left flex items-center gap-4 transition-all duration-200 ${buttonStyle}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-base flex-shrink-0 ${badgeStyle}`}>
-                  {opt}
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+              gap: '10px', marginBottom: '22px'
+            }}>
+              {[
+                { val: score, label: '✅ સાચા', bg: '#dcfce7', color: '#166534' },
+                { val: wrong, label: '❌ ખોટા', bg: '#fee2e2', color: '#991b1b' },
+                { val: unanswered, label: '⏭ છોડ્યા', bg: '#fef9c3', color: '#854d0e' },
+              ].map(s => (
+                <div key={s.label} style={{
+                  background: s.bg, borderRadius: '12px', padding: '12px'
+                }}>
+                  <div style={{
+                    fontSize: '22px', fontWeight: '900', color: s.color
+                  }}>{s.val}</div>
+                  <div style={{
+                    fontSize: '11px', color: s.color, fontWeight: '600'
+                  }}>{s.label}</div>
                 </div>
-                <span className="text-sm sm:text-base font-semibold">{val}</span>
-              </button>
-            );
-          })}
-        </div>
+              ))}
+            </div>
 
-        {hasAnswered && q.explanation && (
-          <div className="mt-6 bg-slate-900/40 border border-amber-500/20 rounded-2xl p-5 shadow-lg">
-            <div className="text-amber-400 font-black text-sm flex items-center gap-2 mb-2">
-              💡 જવાબનું સ્પષ્ટીકરણ (Explanation):
-            </div>
-            <div className="text-slate-300 text-sm leading-relaxed font-medium">
-              {q.explanation}
-            </div>
+            <button
+              onClick={() => { setScreen('setup'); setSelected({}); setCurrent(0); }}
+              style={{
+                width: '100%', padding: '14px',
+                background: 'linear-gradient(135deg,#667eea,#764ba2)',
+                color: 'white', border: 'none', borderRadius: '12px',
+                fontSize: '16px', fontWeight: '800',
+                cursor: 'pointer', marginBottom: '10px'
+              }}>🔄 ફરીથી આપો</button>
+
+            <button onClick={() => router.push('/')} style={{
+              width: '100%', padding: '12px', background: 'transparent',
+              color: '#6b7280', border: '2px solid #e5e7eb',
+              borderRadius: '12px', cursor: 'pointer', fontSize: '14px'
+            }}>← ઘર</button>
           </div>
-        )}
 
-        <div className="flex gap-4 mt-8">
-          <button onClick={() => setCurrent(p => Math.max(0, p-1))} disabled={current === 0}
-            className="flex-1 py-4 border border-slate-800 rounded-2xl bg-slate-900/20 text-slate-400 font-bold hover:text-white hover:border-slate-700 transition-all disabled:opacity-20">
-            ← પાછળ
-          </button>
-          {current < questions.length - 1 ? (
-            <button onClick={() => setCurrent(p => p+1)}
-              className="flex-[2] py-4 bg-gradient-to-r from-violet-600 to-blue-600 text-white font-black rounded-2xl hover:opacity-90 transition-all shadow-lg">
-              આગળ વધીએ →
-            </button>
-          ) : (
-            <button onClick={submitQuiz}
-              className="flex-[2] py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black rounded-2xl hover:opacity-90 transition-all shadow-lg">
-              ✅ ટેસ્ટ પૂરો કરો
-            </button>
-          )}
+          {/* Answer Review */}
+          <div style={{
+            background: 'white', borderRadius: '20px',
+            padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{
+              fontSize: '16px', fontWeight: '800',
+              color: '#1e1b4b', marginBottom: '14px', margin: '0 0 14px'
+            }}>📋 જવાબ સમીક્ષા</h3>
+
+            {questions.map((ques, i) => {
+              const userAns = selected[i];
+              const correct = userAns === ques.correct_answer;
+              const correctText = ques[
+                `option_${ques.correct_answer.toLowerCase()}` as keyof Question
+              ] as string;
+
+              return (
+                <div key={i} style={{
+                  marginBottom: '12px', padding: '12px',
+                  borderRadius: '10px',
+                  background: correct ? '#f0fdf4' : userAns ? '#fef2f2' : '#fafafa',
+                  border: `1px solid ${correct ? '#86efac' : userAns ? '#fca5a5' : '#e5e7eb'}`
+                }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: '700',
+                    color: '#64748b', marginBottom: '4px'
+                  }}>Q{i + 1}</div>
+                  <div style={{
+                    fontSize: '13px', color: '#1e1b4b',
+                    fontWeight: '600', marginBottom: '6px', lineHeight: 1.5
+                  }}>
+                    {ques.question.substring(0, 90)}
+                    {ques.question.length > 90 ? '...' : ''}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: '12px',
+                      background: correct ? '#dcfce7' : userAns ? '#fee2e2' : '#f1f5f9',
+                      color: correct ? '#166534' : userAns ? '#dc2626' : '#64748b',
+                      padding: '2px 8px', borderRadius: '6px', fontWeight: '700'
+                    }}>
+                      તમારો: {userAns || 'છોડ્યો'} {correct ? '✅' : userAns ? '❌' : ''}
+                    </span>
+                    {!correct && (
+                      <span style={{
+                        fontSize: '12px', background: '#dcfce7',
+                        color: '#166534', padding: '2px 8px',
+                        borderRadius: '6px', fontWeight: '700'
+                      }}>
+                        સાચો: {ques.correct_answer} — {correctText?.substring(0, 30)}
+                      </span>
+                    )}
+                  </div>
+                  {ques.explanation && !correct && (
+                    <div style={{
+                      fontSize: '12px', color: '#6b7280',
+                      marginTop: '6px', fontStyle: 'italic', lineHeight: 1.5
+                    }}>
+                      💡 {ques.explanation.substring(0, 120)}
+                      {ques.explanation.length > 120 ? '...' : ''}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
         </div>
       </div>
-    </div>
-  );
-
-  // 3️⃣ RESULT SCREEN
-  if (screen === 'result') return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex items-center justify-center p-4 font-sans relative overflow-hidden">
-      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 max-w-md w-100 text-center shadow-2xl relative z-10">
-        <div className="text-6xl mb-4">
-          {finalScore >= (questions.length * 0.7) ? '🏆' : finalScore >= (questions.length * 0.4) ? '😎' : '💪'}
-        </div>
-        <h2 className="text-3xl font-black text-white mb-1">પરીક્ષાનું પરિણામ</h2>
-        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-6">OFFICIAL SCORECARD</p>
-
-        <div className="bg-slate-950/60 border border-slate-800 rounded-2xl py-6 px-4 mb-6 shadow-inner">
-          <div className={`text-5xl font-black ${finalScore >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            {finalScore} <span className="text-xl text-slate-600">/ {questions.length}</span>
-          </div>
-          <div className="text-sm font-bold text-slate-400 mt-2">મેરિટ ગુણ (Final Merit Marks)</div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3">
-            <div className="text-xl font-black text-emerald-400">{correctCount}</div>
-            <div className="text-[11px] font-bold text-slate-500 mt-0.5">✅ સાચા પ્રશ્નો (+{correctCount})</div>
-          </div>
-          <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3">
-            <div className="text-xl font-black text-red-400">{wrongCount}</div>
-            <div className="text-[11px] font-bold text-slate-500 mt-0.5">❌ ખોટા પ્રશ્નો (-{wrongCount * 0.25})</div>
-          </div>
-        </div>
-
-        <div className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 mb-6 text-left text-xs text-slate-400 space-y-1">
-          <div>• કુલ પ્રશ્નો: <span className="text-white font-bold">{questions.length}</span></div>
-          <div>• ટીક કરેલા પ્રશ્નો (Attempted): <span className="text-white font-bold">{attemptedCount}</span></div>
-          <div>• બાકી છોડેલા પ્રશ્નો (Left): <span className="text-white font-bold">{questions.length - attemptedCount}</span></div>
-        </div>
-
-        <button onClick={() => setScreen('setup')}
-          className="w-full py-4 bg-gradient-to-r from-violet-600 to-blue-600 text-white font-black rounded-xl hover:opacity-90 transition-all shadow-md">
-          🔄 નવો મોક ટેસ્ટ આપો
-        </button>
-        <button onClick={() => router.push('/')}
-          className="w-full mt-3 py-3 border border-slate-800 rounded-xl text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all">
-          ← મુખ્ય ડૅશબોર્ડ પર જાઓ
-        </button>
-      </div>
-    </div>
-  );
+    );
+  }
 
   return null;
 }
