@@ -2,8 +2,8 @@ import "./globals.css";
 import React from "react";
 
 export const metadata = {
-  title: "Quiz App",
-  description: "Practice for Exams",
+  title: "ExamBuddy - Gujarat Govt Exam Preparation",
+  description: "GPSC, GSSSB, Police, SSC exam preparation platform with AI-powered current affairs",
 };
 
 interface RootLayoutProps {

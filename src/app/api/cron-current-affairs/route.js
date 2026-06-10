@@ -1,9 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
-
-const genAI = new GoogleGenerativeAI(
-  process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
-);
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -12,42 +7,46 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
     const today = new Date().toLocaleDateString("gu-IN", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+      year: "numeric", month: "long", day: "numeric",
     });
 
-    const prompt = `Aaj na ${today} na GPSC/UPSC exam mate important current affairs Gujarati ma generate karo.
+    const prompt = `Aaj na ${today} na GPSC/UPSC exam mate 8 important current affairs Gujarati ma generate karo.
 Return ONLY valid JSON array, no markdown:
-[
-  {
-    "title": "headline Gujarati ma",
-    "summary": "2-3 line summary Gujarati ma",
-    "category": "National/International/Economy/Science/Sports",
-    "importance": "High/Medium/Low"
-  }
-]
-Exactly 8 items generate karo.`;
+[{"title":"headline","summary":"2-3 line summary","category":"National","importance":"High"}]`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama3-8b-8192",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.error?.message || "Groq API error");
+
+    const text = data.choices?.[0]?.message?.content || "[]";
     const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
     const jsonMatch = clean.match(/\[[\s\S]*\]/);
     const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
-    const today2 = new Date().toISOString().split("T")[0];
+    const todayDate = new Date().toISOString().split("T")[0];
 
-    const { error } = await supabase.from("current_affairs").upsert(
-      {
-        date: today2,
-        articles: parsed,
-        generated_at: new Date().toISOString(),
-      },
-      { onConflict: "date" }
-    );
+    const { error } = await supabase
+      .from("daily_current_affairs")
+      .upsert(
+        { date: todayDate, articles: parsed, generated_at: new Date().toISOString() },
+        { onConflict: "date" }
+      );
 
     if (error) throw error;
 

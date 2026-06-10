@@ -100,9 +100,9 @@ export default function HomePage() {
         {/* Stats Row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "32px" }}>
           {[
-            { icon: "📚", val: "15+", label: "Subjects" },
-            { icon: "❓", val: "500+", label: "Questions" },
-            { icon: "🏆", val: "3", label: "Exam Types" },
+           { icon: "📚", val: "16", label: "Subjects" },
+{ icon: "❓", val: "3,220+", label: "Questions" },
+{ icon: "🏆", val: "3", label: "Exam Types" }, 
           ].map((s, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "20px", textAlign: "center" }}>
               <div style={{ fontSize: "28px", marginBottom: "4px" }}>{s.icon}</div>

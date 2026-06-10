@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -44,10 +44,17 @@ type Question = {
 
 type Screen = 'setup' | 'quiz' | 'result';
 
-export default function QuizPage() {
+// Next.js 15 માટેનું સાચું ટાઈપિંગ સેટિંગ
+interface PageProps {
+  params: Promise<{ subject: string }>;
+}
+
+export default function QuizPage({ params }: PageProps) {
   const router = useRouter();
-  const params = useParams();
-  const subject = (params?.subject as string) || '';
+  
+  // અહીં આપણે params ને સેફલી અનરેપ (unwrap) કરીએ છીએ
+  const resolvedParams = use(params);
+  const subject = resolvedParams?.subject || '';
 
   const [screen, setScreen] = useState<Screen>('setup');
   const [totalMarks, setTotalMarks] = useState(50);
@@ -509,7 +516,7 @@ export default function QuizPage() {
                       fontSize: '12px',
                       background: correct ? '#dcfce7' : userAns ? '#fee2e2' : '#f1f5f9',
                       color: correct ? '#166534' : userAns ? '#dc2626' : '#64748b',
-                      padding: '2px 8px', borderRadius: '6px', fontWeight: '700'
+                      padding: '20px 8px', borderRadius: '6px', fontWeight: '700'
                     }}>
                       તમારો: {userAns || 'છોડ્યો'} {correct ? '✅' : userAns ? '❌' : ''}
                     </span>
