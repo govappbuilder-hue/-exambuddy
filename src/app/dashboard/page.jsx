@@ -1,13 +1,7 @@
 'use client';
-
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
 
 const SUBJECTS = [
   { value: 'maths', label: '🔢 ગણિત', color: '#6366f1' },
@@ -35,7 +29,6 @@ export default function DashboardPage() {
       if (!user) { router.push('/login'); return; }
       setUser(user);
 
-      // Get question counts per subject
       const results = {};
       let t = 0;
       for (const s of SUBJECTS) {
@@ -67,8 +60,6 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui' }}>
-
-      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px', color: 'white' }}>
         <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -85,8 +76,6 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '20px 16px' }}>
-
-        {/* Stats Row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
           {[
             { icon: '❓', label: 'કુલ સવાલ', value: total, color: '#6366f1' },
@@ -101,11 +90,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Subject Cards - Start Quiz */}
-        <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1e1b4b', marginBottom: '16px' }}>
-          🎯 વિષય પ્રમાણે ક્વિઝ
-        </h2>
-
+        <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1e1b4b', marginBottom: '16px' }}>🎯 વિષય પ્રમાણે ક્વિઝ</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
           {SUBJECTS.map(s => {
             const count = counts[s.value] || 0;
@@ -114,14 +99,13 @@ export default function DashboardPage() {
             return (
               <button key={s.value}
                 onClick={() => ready ? router.push(`/quiz/${s.value}`) : null}
-                style={{ background: 'white', borderRadius: '16px', padding: '16px', border: `2px solid ${ready ? s.color + '30' : '#f1f5f9'}`, cursor: ready ? 'pointer' : 'default', textAlign: 'left', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', transition: 'all 0.2s', opacity: ready ? 1 : 0.6 }}>
+                style={{ background: 'white', borderRadius: '16px', padding: '16px', border: `2px solid ${ready ? s.color + '30' : '#f1f5f9'}`, cursor: ready ? 'pointer' : 'default', textAlign: 'left', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', opacity: ready ? 1 : 0.6 }}>
                 <div style={{ fontSize: '22px', marginBottom: '6px' }}>{s.label.split(' ')[0]}</div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px' }}>
                   {s.label.split(' ').slice(1).join(' ')}
                 </div>
-                {/* Mini bar */}
                 <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '3px', marginBottom: '6px' }}>
-                  <div style={{ height: '100%', width: `${barWidth}%`, background: s.color, borderRadius: '3px', transition: 'width 0.5s' }} />
+                  <div style={{ height: '100%', width: `${barWidth}%`, background: s.color, borderRadius: '3px' }} />
                 </div>
                 <div style={{ fontSize: '12px', color: ready ? s.color : '#94a3b8', fontWeight: '700' }}>
                   {ready ? `${count} સવાલ ✓` : `${count} સવાલ (ઓછા)`}
@@ -131,7 +115,6 @@ export default function DashboardPage() {
           })}
         </div>
 
-        {/* Quick Actions */}
         <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1e1b4b', marginBottom: '16px' }}>⚡ ઝડપી કામ</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
           {[
@@ -150,7 +133,6 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
-
       </div>
     </div>
   );

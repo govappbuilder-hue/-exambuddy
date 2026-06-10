@@ -1,12 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,7 +11,7 @@ export default function LoginPage() {
   const [msg, setMsg] = useState('');
 
   const handleLogin = async () => {
-    if (!email || !password) { setMsg('❌ Email અને Password ભरो!'); return; }
+    if (!email || !password) { setMsg('❌ Email અને Password ભરો!'); return; }
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);

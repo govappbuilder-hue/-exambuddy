@@ -1,13 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
 
 const ADMIN_PASSWORD = 'ExamBuddy@2025#Admin';
 
@@ -54,14 +49,12 @@ export default function AdminPage() {
   const [tab, setTab] = useState('bulk');
   const [stats, setStats] = useState({});
 
-  // Bulk state
   const [jsonText, setJsonText] = useState('');
   const [subject, setSubject] = useState('maths');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [preview, setPreview] = useState([]);
 
-  // Single state
   const [form, setForm] = useState({
     question: '', option_a: '', option_b: '', option_c: '', option_d: '',
     correct_answer: 'A', subject: 'maths', explanation: ''
@@ -69,13 +62,11 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // ── Auth check on load ──
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_auth');
     if (stored === ADMIN_PASSWORD) setAuthed(true);
   }, []);
 
-  // ── Load stats after auth ──
   useEffect(() => {
     if (!authed) return;
     const loadStats = async () => {
@@ -120,7 +111,7 @@ export default function AdminPage() {
 
   const validateQuestion = (q) =>
     q.question && q.option_a && q.option_b && q.option_c && q.option_d &&
-    ['A','B','C','D'].includes(q.correct_answer?.toUpperCase());
+    ['A', 'B', 'C', 'D'].includes(q.correct_answer?.toUpperCase());
 
   const handleBulkUpload = async () => {
     let parsed;
@@ -128,17 +119,17 @@ export default function AdminPage() {
       parsed = JSON.parse(jsonText);
       if (!Array.isArray(parsed)) throw new Error();
     } catch {
-      setUploadResult({ type: 'error', msg: '❌ JSON format sahi nathi!' });
+      setUploadResult({ type: 'error', msg: '❌ JSON format સાચો નથી!' });
       return;
     }
     const valid = parsed.filter(validateQuestion);
     const invalid = parsed.length - valid.length;
     if (!valid.length) {
-      setUploadResult({ type: 'error', msg: '❌ Koi valid question nathi!' });
+      setUploadResult({ type: 'error', msg: '❌ કોઈ valid question નથી!' });
       return;
     }
     setUploading(true);
-    setUploadResult({ type: 'loading', msg: `⏳ ${valid.length} questions upload thaay che...` });
+    setUploadResult({ type: 'loading', msg: `⏳ ${valid.length} questions upload થઈ રહ્યા છે...` });
     const toInsert = valid.map(q => ({
       question: q.question.trim(),
       option_a: q.option_a.trim(), option_b: q.option_b.trim(),
@@ -155,10 +146,9 @@ export default function AdminPage() {
     setUploading(false);
     setUploadResult({
       type: 'success',
-      msg: `✅ ${successCount} questions add thaya!${invalid > 0 ? ` (${invalid} skip)` : ''}`
+      msg: `✅ ${successCount} questions add થઈ ગયા!${invalid > 0 ? ` (${invalid} skip)` : ''}`
     });
     if (successCount > 0) { setJsonText(''); setPreview([]); }
-    // Refresh stats
     const { count } = await supabase.from('questions').select('*', { count: 'exact', head: true }).eq('subject', subject);
     setStats(p => ({ ...p, [subject]: count || 0 }));
   };
@@ -177,7 +167,6 @@ export default function AdminPage() {
     }
   };
 
-  // ── LOGIN SCREEN ──
   if (!authed) return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
       <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '380px', width: '100%', boxShadow: '0 25px 60px rgba(0,0,0,0.4)', textAlign: 'center' }}>
@@ -219,14 +208,12 @@ export default function AdminPage() {
     </div>
   );
 
-  // ── ADMIN PANEL ──
   const totalQ = Object.values(stats).reduce((a, b) => a + b, 0);
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px', fontFamily: 'system-ui' }}>
       <div style={{ maxWidth: '720px', margin: '0 auto' }}>
 
-        {/* Header */}
         <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', borderRadius: '20px', padding: '18px 24px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: '900', margin: 0 }}>🛡️ Admin Panel</h1>
@@ -238,7 +225,6 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
           {[
             { label: 'કુલ સવાલ', value: totalQ, icon: '❓', color: '#6366f1' },
@@ -253,7 +239,6 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Subject Stats */}
         <div style={{ background: 'white', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
           <div style={{ fontWeight: '800', color: '#1e1b4b', marginBottom: '12px', fontSize: '14px' }}>📊 Subject wise Questions</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
@@ -270,7 +255,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
           {[
             { key: 'bulk', label: '📦 Bulk Upload' },
@@ -283,7 +267,6 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* BULK TAB */}
         {tab === 'bulk' && (
           <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ marginBottom: '16px' }}>
@@ -313,7 +296,7 @@ export default function AdminPage() {
                 <div style={{ fontWeight: '700', color: '#1d4ed8', fontSize: '12px', marginBottom: '8px' }}>👁️ Preview ({preview.length} questions):</div>
                 {preview.map((q, i) => (
                   <div key={i} style={{ background: 'white', borderRadius: '8px', padding: '8px', marginBottom: '6px', fontSize: '12px' }}>
-                    <div style={{ fontWeight: '700', color: '#1e1b4b' }}>Q{i+1}: {q.question?.substring(0, 70)}...</div>
+                    <div style={{ fontWeight: '700', color: '#1e1b4b' }}>Q{i + 1}: {q.question?.substring(0, 70)}...</div>
                     <div style={{ color: '#10b981', fontWeight: '600' }}>✅ {q.correct_answer} → {q[`option_${q.correct_answer?.toLowerCase()}`]?.substring(0, 40)}</div>
                   </div>
                 ))}
@@ -333,7 +316,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* SINGLE TAB */}
         {tab === 'single' && (
           <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             {msg && (
@@ -343,38 +325,38 @@ export default function AdminPage() {
             )}
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📚 Subject</label>
-              <select value={form.subject} onChange={e => setForm({...form, subject: e.target.value})}
+              <select value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
                 {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>❓ Question</label>
-              <textarea value={form.question} onChange={e => setForm({...form, question: e.target.value})}
+              <textarea value={form.question} onChange={e => setForm({ ...form, question: e.target.value })}
                 placeholder="પ્રશ્ન અહીં..."
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '80px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
             </div>
-            {['A','B','C','D'].map(opt => (
+            {['A', 'B', 'C', 'D'].map(opt => (
               <div key={opt} style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '12px' }}>
                   {opt === form.correct_answer ? '✅' : '⬜'} Option {opt}
                 </label>
                 <input value={form[`option_${opt.toLowerCase()}`]}
-                  onChange={e => setForm({...form, [`option_${opt.toLowerCase()}`]: e.target.value})}
+                  onChange={e => setForm({ ...form, [`option_${opt.toLowerCase()}`]: e.target.value })}
                   placeholder={`Option ${opt}`}
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `2px solid ${opt === form.correct_answer ? '#86efac' : '#e5e7eb'}`, fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             ))}
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>✅ Correct Answer</label>
-              <select value={form.correct_answer} onChange={e => setForm({...form, correct_answer: e.target.value})}
+              <select value={form.correct_answer} onChange={e => setForm({ ...form, correct_answer: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #86efac', fontSize: '15px', outline: 'none' }}>
-                {['A','B','C','D'].map(o => <option key={o} value={o}>Option {o}</option>)}
+                {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>Option {o}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '18px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>💡 Explanation (optional)</label>
-              <textarea value={form.explanation} onChange={e => setForm({...form, explanation: e.target.value})}
+              <textarea value={form.explanation} onChange={e => setForm({ ...form, explanation: e.target.value })}
                 placeholder="સ્પષ્ટીકરણ..."
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '60px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
             </div>

@@ -1,12 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
 
 const EXAMS = [
   {
@@ -74,7 +69,7 @@ const EXAMS = [
 
 export default function MockTestPage() {
   const router = useRouter();
-  const [screen, setScreen] = useState('select'); // select | loading | quiz | result
+  const [screen, setScreen] = useState('select');
   const [selectedExam, setSelectedExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
@@ -82,7 +77,21 @@ export default function MockTestPage() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loadMsg, setLoadMsg] = useState('');
 
-  const submitTest = useCallback(() => setScreen('result'), []);
+  const submitTest = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && selectedExam) {
+      const finalScore = questions.reduce((acc, q, i) =>
+        selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+      await supabase.from('quiz_history').insert({
+        user_id: user.id,
+        subject_name: selectedExam.name,
+        score: finalScore,
+        total: questions.length,
+        created_at: new Date().toISOString(),
+      });
+    }
+    setScreen('result');
+  }, [questions, selected, selectedExam]);
 
   useEffect(() => {
     if (screen !== 'quiz') return;
@@ -98,11 +107,11 @@ export default function MockTestPage() {
   const startExam = async (exam) => {
     setSelectedExam(exam);
     setScreen('loading');
-    setLoadMsg('Questions fetch karya che...');
+    setLoadMsg('Questions fetch કરાઈ રહ્યા છે...');
 
     const allQ = [];
     for (const sub of exam.subjects) {
-      setLoadMsg(`${sub.label} na questions laavi rahya che...`);
+      setLoadMsg(`${sub.label} ના questions લાવી રહ્યા છે...`);
       const { data } = await supabase
         .from('questions')
         .select('*')
@@ -110,7 +119,6 @@ export default function MockTestPage() {
         .limit(sub.count * 3);
 
       if (data?.length) {
-        // Shuffle
         const arr = [...data];
         for (let i = arr.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -122,12 +130,11 @@ export default function MockTestPage() {
     }
 
     if (!allQ.length) {
-      alert('Questions nathi! Pehla Admin thi questions add karo.');
+      alert('Questions નથી! Admin થી questions add કરો.');
       setScreen('select');
       return;
     }
 
-    // Final shuffle
     for (let i = allQ.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [allQ[i], allQ[j]] = [allQ[j], allQ[i]];
@@ -147,7 +154,6 @@ export default function MockTestPage() {
   const ss = String(timeLeft % 60).padStart(2, '0');
   const timerRed = timeLeft < 120;
 
-  /* ── SELECT SCREEN ── */
   if (screen === 'select') return (
     <div style={{ minHeight: '100vh', background: '#0f172a', fontFamily: 'system-ui', color: 'white', padding: '20px' }}>
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
@@ -158,7 +164,7 @@ export default function MockTestPage() {
           </button>
           <div>
             <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '900' }}>🏆 Mock Test</h1>
-            <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>Real exam pattern sathe practice karo</p>
+            <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>Real exam pattern સાથે practice કરો</p>
           </div>
         </div>
 
@@ -194,35 +200,29 @@ export default function MockTestPage() {
     </div>
   );
 
-  /* ── LOADING SCREEN ── */
   if (screen === 'loading') return (
     <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
       <div style={{ textAlign: 'center', color: 'white' }}>
         <div style={{ fontSize: '56px', marginBottom: '20px' }}>⏳</div>
-        <h2 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '10px' }}>
-          {selectedExam?.name}
-        </h2>
+        <h2 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '10px' }}>{selectedExam?.name}</h2>
         <p style={{ color: '#64748b', fontSize: '14px' }}>{loadMsg}</p>
         <div style={{ width: '200px', height: '4px', background: '#334155', borderRadius: '2px', margin: '20px auto 0' }}>
-          <div style={{ height: '100%', background: selectedExam?.color, borderRadius: '2px', animation: 'pulse 1s ease-in-out infinite', width: '60%' }} />
+          <div style={{ height: '100%', background: selectedExam?.color, borderRadius: '2px', width: '60%' }} />
         </div>
       </div>
     </div>
   );
 
-  /* ── QUIZ SCREEN ── */
   const q = questions[current];
   if (screen === 'quiz' && q) {
     const answered = selected[current];
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a', fontFamily: 'system-ui', color: 'white' }}>
-
-        {/* Top Bar */}
         <div style={{ background: '#1e293b', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid #334155' }}>
           <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
             {selectedExam?.icon} {selectedExam?.name}
           </div>
-          <div style={{ background: timerRed ? '#ef444420' : '#1e293b', border: `2px solid ${timerRed ? '#ef4444' : '#334155'}`, borderRadius: '10px', padding: '5px 12px', color: timerRed ? '#ef4444' : '#10b981', fontWeight: '900', fontSize: '16px', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ background: timerRed ? '#ef444420' : '#1e293b', border: `2px solid ${timerRed ? '#ef4444' : '#334155'}`, borderRadius: '10px', padding: '5px 12px', color: timerRed ? '#ef4444' : '#10b981', fontWeight: '900', fontSize: '16px' }}>
             ⏱ {mm}:{ss}
           </div>
           <button onClick={submitTest}
@@ -231,7 +231,6 @@ export default function MockTestPage() {
           </button>
         </div>
 
-        {/* Progress */}
         <div style={{ background: '#1e293b', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', borderBottom: '1px solid #334155' }}>
           <span>{current + 1} / {questions.length} • {q._subject}</span>
           <span style={{ color: '#10b981', fontWeight: '700' }}>Score: {score}</span>
@@ -241,8 +240,6 @@ export default function MockTestPage() {
         </div>
 
         <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px' }}>
-
-          {/* Question */}
           <div style={{ background: '#1e293b', borderRadius: '14px', padding: '20px', marginBottom: '14px', border: '1px solid #334155' }}>
             <div style={{ fontSize: '11px', color: '#818cf8', fontWeight: '700', letterSpacing: '1px', marginBottom: '10px' }}>
               {q._subject?.toUpperCase()} • Q{current + 1}
@@ -250,8 +247,7 @@ export default function MockTestPage() {
             <p style={{ fontSize: '16px', fontWeight: '600', margin: 0, lineHeight: 1.7 }}>{q.question}</p>
           </div>
 
-          {/* Options */}
-          {['A','B','C','D'].map(opt => {
+          {['A', 'B', 'C', 'D'].map(opt => {
             const val = q[`option_${opt.toLowerCase()}`];
             const isSelected = answered === opt;
             const isCorrect = opt === q.correct_answer;
@@ -274,7 +270,6 @@ export default function MockTestPage() {
             );
           })}
 
-          {/* Solution */}
           {answered && q.explanation && (
             <div style={{ background: '#1c1a00', border: '2px solid #ca8a04', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
               <div style={{ color: '#fbbf24', fontWeight: '800', fontSize: '12px', marginBottom: '4px' }}>💡 સ્પષ્ટીકરણ:</div>
@@ -287,7 +282,6 @@ export default function MockTestPage() {
             </div>
           )}
 
-          {/* Navigation */}
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={() => setCurrent(p => Math.max(0, p - 1))} disabled={current === 0}
               style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #334155', background: current === 0 ? '#0f172a' : '#1e293b', color: current === 0 ? '#475569' : '#e2e8f0', fontWeight: '700', cursor: current === 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
@@ -315,12 +309,9 @@ export default function MockTestPage() {
     );
   }
 
-  /* ── RESULT SCREEN ── */
   if (screen === 'result') {
     const wrong = questions.length - score;
     const unanswered = questions.length - Object.keys(selected).length;
-
-    // Subject wise breakdown
     const subjectStats = {};
     questions.forEach((q, i) => {
       const sub = q._subject || 'Other';
@@ -332,8 +323,6 @@ export default function MockTestPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a', fontFamily: 'system-ui', color: 'white', padding: '20px' }}>
         <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-
-          {/* Main Score */}
           <div style={{ background: '#1e293b', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '16px', border: '1px solid #334155' }}>
             <div style={{ fontSize: '56px', marginBottom: '10px' }}>
               {percent >= 80 ? '🏆' : percent >= 60 ? '🎯' : percent >= 40 ? '📚' : '💪'}
@@ -372,7 +361,6 @@ export default function MockTestPage() {
             </button>
           </div>
 
-          {/* Subject Breakdown */}
           <div style={{ background: '#1e293b', borderRadius: '20px', padding: '20px', border: '1px solid #334155' }}>
             <h3 style={{ margin: '0 0 14px', fontSize: '15px', fontWeight: '800' }}>📊 Subject Wise Performance</h3>
             {Object.entries(subjectStats).map(([sub, stat]) => {
@@ -392,7 +380,6 @@ export default function MockTestPage() {
               );
             })}
           </div>
-
         </div>
       </div>
     );
