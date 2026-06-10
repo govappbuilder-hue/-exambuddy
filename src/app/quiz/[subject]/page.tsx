@@ -25,7 +25,7 @@ const SUBJECT_MAP: Record<string, { dbName: string; displayName: string }> = {
   current_affairs: { dbName: 'કરંટ અફેર્સ', displayName: '📰 કરંટ અફેર્સ' },
   heritage: { dbName: 'સાંસ્કૃતિક વારસો', displayName: '🏛️ સાંસ્કૃતિક વારસો' },
   economics: { dbName: 'અર્થશાસ્ત્ર', displayName: '📈 અર્થશાસ્ત્ર' },
-  pub_ad: { dbName: 'જાહેર વહીવટ', displayName: '🏢 જાહેર વહીવટ' }
+  pub_ad: { dbName: 'જાहेर વહીવટ', displayName: '🏢 જાહેર વહીવટ' }
 };
 
 interface Question {
@@ -42,13 +42,14 @@ interface Question {
 type ScreenType = 'setup' | 'quiz' | 'result';
 
 interface PageProps {
-  params: Promise<{ subject: string }>;
+  params: any;
 }
 
 export default function QuizPage({ params }: PageProps) {
   const router = useRouter();
   
   const [routeSubject, setRouteSubject] = useState<string>("");
+  const [isParamsReady, setIsParamsReady] = useState(false); // નવું પ્રોટેક્શન સ્ટેટ
   const [screen, setScreen] = useState<ScreenType>('setup');
   const [totalMarks, setTotalMarks] = useState(50);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -57,17 +58,26 @@ export default function QuizPage({ params }: PageProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Next.js 15 પ્રિન્સિપલ મુજબ params ને સેટઅપ કરવું
+  // URL Params ને સેફલી લોડ કરવાનો ૧૦૦% સાચો રસ્તો
   useEffect(() => {
-    params.then((resolved) => {
-      if (resolved?.subject) {
-        setRouteSubject(resolved.subject);
-      }
-    }).catch(console.error);
+    if (params) {
+      Promise.resolve(params)
+        .then((res) => {
+          if (res && res.subject) {
+            setRouteSubject(res.subject);
+          }
+          setIsParamsReady(true); // ડેટા મળી ગયો એટલે સિગ્નલ ગ્રીન
+        })
+        .catch((err) => {
+          console.error(err);
+          setIsParamsReady(true);
+        });
+    } else {
+      setIsParamsReady(true);
+    }
   }, [params]);
 
   const subjectConfig = SUBJECT_MAP[routeSubject] || { dbName: routeSubject, displayName: routeSubject };
-
   const questionCount = totalMarks;
   const timeSeconds = totalMarks * 60;
 
@@ -124,11 +134,22 @@ export default function QuizPage({ params }: PageProps) {
   const wrongCount = attemptedCount - correctCount;
   const negativeMarks = wrongCount * 0.25;
   const finalScore = parseFloat((correctCount - negativeMarks).toFixed(2));
-  const percent = questions.length ? Math.round((correctCount / questions.length) * 100) : 0;
 
   const mm = String(Math.floor(timeLeft / 60)).padStart(2, '0');
   const ss = String(timeLeft % 60).padStart(2, '0');
   const timerColor = timeLeft < 60 ? '#ef4444' : timeLeft < 300 ? '#fbbf24' : '#34d399';
+
+  // જ્યાં સુધી URL ના ડેટા ન લોડ થાય ત્યાં સુધી બ્લેન્ક નહિ પણ મસ્ત લોડિંગ સ્ક્રીન દેખાશે
+  if (!isParamsReady) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] text-slate-100 flex items-center justify-center font-sans">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400 font-bold">વિષય લોડ થઈ રહ્યો છે...</p>
+        </div>
+      </div>
+    );
+  }
 
   // 1️⃣ SETUP SCREEN
   if (screen === 'setup') return (
@@ -141,7 +162,7 @@ export default function QuizPage({ params }: PageProps) {
 
         <div className="flex flex-col gap-3 mb-8">
           {[
-            { marks: 50, label: '50 માર્ક્સ', sub: '50 સવાલ • 50 મિનિટ (0.25 નેગેટિવ)', color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' },
+            { marks: 50, label: '50 માર્ક્સ', sub: '50 સવાલ • 50 મિનิต (0.25 નેગેટિવ)', color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' },
             { marks: 100, label: '100 માર્ક્સ', sub: '100 સવાલ • 100 મિનિટ (0.25 નેગેટિવ)', color: 'border-blue-500/30 text-blue-400 bg-blue-500/5' },
             { marks: 200, label: '200 માર્ક્સ', sub: '200 સવાલ • 200 મિનિટ (0.25 નેગેટિવ)', color: 'border-violet-500/30 text-violet-400 bg-violet-500/5' },
           ].map(opt => {
@@ -235,7 +256,7 @@ export default function QuizPage({ params }: PageProps) {
         </div>
 
         {hasAnswered && q.explanation && (
-          <div className="mt-6 bg-slate-900/40 border border-amber-500/20 rounded-2xl p-5 shadow-lg animate-fadeIn">
+          <div className="mt-6 bg-slate-900/40 border border-amber-500/20 rounded-2xl p-5 shadow-lg">
             <div className="text-amber-400 font-black text-sm flex items-center gap-2 mb-2">
               💡 જવાબનું સ્પષ્ટીકરણ (Explanation):
             </div>
@@ -291,7 +312,7 @@ export default function QuizPage({ params }: PageProps) {
           </div>
           <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3">
             <div className="text-xl font-black text-red-400">{wrongCount}</div>
-            <div className="text-[11px] font-bold text-slate-500 mt-0.5">❌ ખોટા પ્રશ્નો (-{negativeMarks})</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-0.5">❌ ખોટા પ્રશ્નો (-{wrongCount * 0.25})</div>
           </div>
         </div>
 
