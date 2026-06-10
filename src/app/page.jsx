@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase"; // તારું supabase કનેક્શન
 
 const SUBJECTS = [
   // GPSC
@@ -36,6 +37,38 @@ const EXAM_COLORS = {
 export default function HomePage() {
   const router = useRouter();
   const [activeExam, setActiveExam] = useState("બધા");
+  const [user, setUser] = useState(null);
+
+  // યુઝર લોગિન છે કે નહીં તે ચેક કરવા માટે
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Google Login ફંક્શન
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+  };
+
+  // Logout ફંક્શન
+  const handleLogout = async () => {
+    await supabase.signOut();
+    setUser(null);
+  };
 
   const filtered = activeExam === "બધા" ? SUBJECTS : SUBJECTS.filter(s => s.exam === activeExam);
 
@@ -62,6 +95,22 @@ export default function HomePage() {
               style={{ padding: "8px 16px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "#94a3b8", fontWeight: "700", fontSize: "13px", cursor: "pointer" }}>
               ⚙️ Admin
             </button>
+
+            {/* Dynamic Auth Button */}
+            {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "4px" }}>
+                <img src={user.user_metadata?.avatar_url} alt="profile" style={{ width: "30px", height: "30px", borderRadius: "50%", border: "1px solid #38bdf8" }} />
+                <button onClick={handleLogout}
+                  style={{ padding: "8px 14px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "10px", color: "#f87171", fontWeight: "700", fontSize: "13px", cursor: "pointer" }}>
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <button onClick={handleGoogleLogin}
+                style={{ padding: "8px 14px", background: "white", border: "none", borderRadius: "10px", color: "#0f172a", fontWeight: "700", fontSize: "13px", cursor: "pointer", marginLeft: "4px" }}>
+                🚀 Google Login
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -77,6 +126,11 @@ export default function HomePage() {
             સરકારી નોકરી માટે<br/>
             <span style={{ background: "linear-gradient(90deg, #818cf8, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Smart Practice</span> કરો
           </h1>
+          {user && (
+            <p style={{ color: "#38bdf8", fontSize: "15px", fontWeight: "600", marginBottom: "10px" }}>
+              ગમતું નામ, વેલકમ બેક, {user.user_metadata?.full_name}! 👋
+            </p>
+          )}
           <p style={{ color: "#64748b", fontSize: "16px", maxWidth: "500px", margin: "0 auto" }}>
             GPSC • GSSSB • Police • SSC • Railway - બધા exam ની practice અહીં
           </p>
@@ -100,9 +154,9 @@ export default function HomePage() {
         {/* Stats Row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "32px" }}>
           {[
-           { icon: "📚", val: "16", label: "Subjects" },
-{ icon: "❓", val: "3,220+", label: "Questions" },
-{ icon: "🏆", val: "3", label: "Exam Types" }, 
+            { icon: "📚", val: "16", label: "Subjects" },
+            { icon: "❓", val: "3,220+", label: "Questions" },
+            { icon: "🏆", val: "3", label: "Exam Types" }, 
           ].map((s, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "20px", textAlign: "center" }}>
               <div style={{ fontSize: "28px", marginBottom: "4px" }}>{s.icon}</div>
@@ -171,7 +225,7 @@ export default function HomePage() {
 
         {/* Footer */}
         <div style={{ textAlign: "center", paddingTop: "24px", borderTop: "1px solid rgba(255,255,255,0.05)", color: "#334155", fontSize: "13px", fontWeight: "600" }}>
-          Made with 💙 for Gujarat Exam Aspirants • ExamBuddy 2025
+          Made with 💙 for Gujarat Exam Aspirants • ExamBuddy 2026
         </div>
 
       </div>
