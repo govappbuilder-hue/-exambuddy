@@ -1,5 +1,4 @@
-// ✅ FIX: Use new @google/genai package instead of deprecated @google/generative-ai
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(request) {
   try {
@@ -11,10 +10,12 @@ export async function POST(request) {
       return Response.json({ error: "No question provided" }, { status: 400 });
     }
     if (!apiKey) {
-      return Response.json({ error: "Gemini API key is missing on the server" }, { status: 500 });
+      return Response.json({ error: "Gemini API key is missing" }, { status: 500 });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // ✅ Use same model as other working routes in project
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const contextLines = history
       ? history
@@ -36,16 +37,12 @@ Rules:
 
     const prompt = `${systemContext}\n\nPrevious conversation:\n${contextLines}\n\nStudent's current question: ${question}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
-    });
-
-    const answer = response.text;
+    const result = await model.generateContent(prompt);
+    const answer = result.response.text();
 
     return Response.json({ answer });
   } catch (error) {
-    console.error("Doubt solver error:", error);
+    console.error("Doubt solver error:", error.message);
     return Response.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
