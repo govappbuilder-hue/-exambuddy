@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// ✅ FIX: Use new @google/genai package instead of deprecated @google/generative-ai
+import { GoogleGenAI } from "@google/genai";
 
 export async function POST(request) {
   try {
-    // ✅ FIX: apiKey inside function so it reads fresh on each request
     const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
     const { question, history } = await request.json();
@@ -14,15 +14,13 @@ export async function POST(request) {
       return Response.json({ error: "Gemini API key is missing on the server" }, { status: 500 });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // ✅ FIX: gemini-2.0-flash-lite -> gemini-2.0-flash (correct model name)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const ai = new GoogleGenAI({ apiKey });
 
     const contextLines = history
       ? history
           .slice(-4)
-          .map((m) => `${m.role === 'user' ? 'Student' : 'Teacher'}: ${m.text}`)
-          .join('\n')
+          .map((m) => `${m.role === "user" ? "Student" : "Teacher"}: ${m.text}`)
+          .join("\n")
       : "";
 
     const systemContext = `તમે ExamBuddy ના AI Doubt Solver Teacher છો.
@@ -38,8 +36,12 @@ Rules:
 
     const prompt = `${systemContext}\n\nPrevious conversation:\n${contextLines}\n\nStudent's current question: ${question}`;
 
-    const result = await model.generateContent(prompt);
-    const answer = result.response.text();
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+    });
+
+    const answer = response.text;
 
     return Response.json({ answer });
   } catch (error) {
