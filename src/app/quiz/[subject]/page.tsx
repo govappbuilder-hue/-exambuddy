@@ -50,6 +50,7 @@ export default function QuizPage({ params }: PageProps) {
 
   const [screen, setScreen] = useState<Screen>('setup');
   const [totalMarks, setTotalMarks] = useState(50);
+  const [negativeMarking, setNegativeMarking] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<Record<number, string>>({});
@@ -86,8 +87,12 @@ export default function QuizPage({ params }: PageProps) {
   const submitQuiz = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const finalScore = questions.reduce((acc, q, i) =>
-        selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+      const rawScore = questions.reduce((acc, q, i) => {
+        if (selected[i] === q.correct_answer) return acc + 1;
+        if (negativeMarking && selected[i] !== undefined) return acc - 0.25;
+        return acc;
+      }, 0);
+      const finalScore = Math.max(0, Math.round(rawScore * 100) / 100);
       await supabase.from('quiz_history').insert({
         user_id: user.id,
         subject_name: SUBJECT_NAMES[subject] || subject,
@@ -110,8 +115,12 @@ export default function QuizPage({ params }: PageProps) {
     return () => clearInterval(t);
   }, [screen, submitQuiz]);
 
-  const score = questions.reduce((acc, q, i) =>
-    selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+  const score = questions.reduce((acc, q, i) => {
+    if (selected[i] === q.correct_answer) return acc + 1;
+    if (negativeMarking && selected[i] !== undefined) return acc - 0.25;
+    return acc;
+  }, 0);
+  const finalDisplayScore = Math.max(0, Math.round(score * 100) / 100);
   const percent = questions.length
     ? Math.round((score / questions.length) * 100)
     : 0;
@@ -146,6 +155,19 @@ export default function QuizPage({ params }: PageProps) {
           ))}
         </div>
 
+
+        {/* Negative Marking Toggle */}
+        <div onClick={() => setNegativeMarking((p: boolean) => !p)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '12px', border: `2px solid ${negativeMarking ? '#ef4444' : '#e5e7eb'}`, background: negativeMarking ? '#fef2f2' : '#f8fafc', cursor: 'pointer', marginBottom: '16px', transition: 'all 0.2s' }}>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontWeight: '800', fontSize: '15px', color: negativeMarking ? '#ef4444' : '#374151' }}>⚠️ Negative Marking</div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>ખોટા જવાબ પર -0.25 marks</div>
+          </div>
+          <div style={{ width: '44px', height: '24px', borderRadius: '12px', background: negativeMarking ? '#ef4444' : '#cbd5e1', position: 'relative', transition: 'background 0.2s' }}>
+            <div style={{ position: 'absolute', top: '2px', left: negativeMarking ? '22px' : '2px', width: '20px', height: '20px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+          </div>
+        </div>
+
         <button onClick={startQuiz} disabled={loading} style={{ width: '100%', padding: '15px', background: loading ? '#94a3b8' : 'linear-gradient(135deg,#667eea,#764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '17px', fontWeight: '900', cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '10px' }}>
           {loading ? '⏳ લોડ...' : '🚀 ક્વિઝ શરૂ કરો'}
         </button>
@@ -176,7 +198,7 @@ export default function QuizPage({ params }: PageProps) {
 
         <div style={{ background: '#1e293b', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
           <span>પ્રશ્ન {current + 1} / {questions.length}</span>
-          <span style={{ color: '#10b981', fontWeight: '700' }}>Score: {score}</span>
+          <span style={{ color: '#10b981', fontWeight: '700' }}>Score: {finalDisplayScore}{negativeMarking ? " (–0.25/wrong)" : ""}</span>
         </div>
         <div style={{ height: '3px', background: '#334155' }}>
           <div style={{ height: '100%', background: 'linear-gradient(90deg,#667eea,#764ba2)', width: `${((current + 1) / questions.length) * 100}%`, transition: 'width 0.3s' }} />
@@ -273,7 +295,7 @@ export default function QuizPage({ params }: PageProps) {
               {percent >= 80 ? 'શ્રેષ્ઠ!' : percent >= 60 ? 'સારું!' : percent >= 40 ? 'ઠીક છે' : 'વધુ પ્રેક્ટિસ!'}
             </h2>
             <div style={{ fontSize: '44px', fontWeight: '900', color: percent >= 60 ? '#10b981' : '#ef4444', margin: '14px 0 6px' }}>
-              {score}/{questions.length}
+              {finalDisplayScore}/{questions.length}
             </div>
             <div style={{ fontSize: '18px', color: '#6b7280', marginBottom: '20px' }}>{percent}% સાચા</div>
 

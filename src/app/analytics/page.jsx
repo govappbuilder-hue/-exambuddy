@@ -10,6 +10,7 @@ export default function AnalyticsPage() {
   const [history, setHistory] = useState([]);
   const [stats, setStats] = useState({ totalPlayed: 0, avgScore: 0 });
   const [chartData, setChartData] = useState([]);
+  const [weakSubjects, setWeakSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +39,22 @@ export default function AnalyticsPage() {
           score: Math.round((item.score / item.total) * 100),
         }));
         setChartData(formattedData);
-      } else {
+
+        // Weakness analytics — subject wise avg score
+        const subMap = {};
+        data.forEach(item => {
+          const sub = item.subject_name || 'other';
+          if (!subMap[sub]) subMap[sub] = { total: 0, correct: 0, count: 0 };
+          subMap[sub].correct += item.score;
+          subMap[sub].total += item.total;
+          subMap[sub].count += 1;
+        });
+        const subList = Object.entries(subMap).map(([name, v]) => ({
+          name,
+          avg: Math.round((v.correct / v.total) * 100),
+          attempts: v.count,
+        })).sort((a, b) => a.avg - b.avg); // weakest first
+        setWeakSubjects(subList);
         setChartData([
           { name: 'Test 1', score: 40 },
           { name: 'Test 2', score: 60 },
@@ -120,6 +136,39 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Weakness Analytics */}
+        {weakSubjects.length > 0 && (
+          <div style={{ background: 'white', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '24px', marginBottom: '30px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
+              🎯 Weakness Analytics
+            </h3>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px' }}>
+              નીચેના વિષયોમાં સૌથી ઓછો સ્કોર — વધારે practice કરો
+            </p>
+            {weakSubjects.map((s, i) => {
+              const color = s.avg < 40 ? '#ef4444' : s.avg < 60 ? '#f59e0b' : '#10b981';
+              const label = s.avg < 40 ? '🔴 નબળું' : s.avg < 60 ? '🟡 સુધારો' : '🟢 સારું';
+              return (
+                <div key={s.name} style={{ marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                    <span style={{ fontWeight: '700', fontSize: '14px', color: '#334155' }}>
+                      {i + 1}. {s.name}
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>{s.attempts} attempts</span>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color }}>{label}</span>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color }}>{s.avg}%</span>
+                    </div>
+                  </div>
+                  <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px' }}>
+                    <div style={{ height: '100%', width: `${s.avg}%`, background: color, borderRadius: '4px', transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Quiz History */}
         <div style={{ background: 'white', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '24px' }}>
