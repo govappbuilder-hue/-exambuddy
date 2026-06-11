@@ -76,7 +76,7 @@ const Badge = ({ children, color = "blue" }) => {
 const Card = ({ children, className = "", onClick }) => (
   <div
     onClick={onClick}
-    className={`bg-white border border-gray-100 rounded-2xl p-5 ${onClick ? "cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" : ""} ${className}`}
+    className={`bg-white border border-gray-100 rounded-2xl p-5 shadow-sm ${onClick ? "cursor-pointer hover:border-blue-200 hover:shadow-md active:scale-[0.99] transition-all duration-150" : ""} ${className}`}
   >
     {children}
   </div>
@@ -90,18 +90,18 @@ const StatCard = ({ label, value, sub, icon, color = "blue" }) => {
     purple: "text-purple-600 bg-purple-50",
   };
   return (
-    <Card>
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">{label}</p>
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
           {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
         </div>
         <div className={`p-2 rounded-xl ${colors[color]}`}>
           <Icon name={icon} size={18} />
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
@@ -129,11 +129,12 @@ const DashboardTab = ({ setActiveTab }) => {
   return (
     <div className="space-y-6">
       {/* Welcome + streak */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 text-white">
-        <div className="flex items-start justify-between">
+      <div className="bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-600/20 relative overflow-hidden">
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+        <div className="flex items-start justify-between relative">
           <div>
             <p className="text-blue-100 text-sm">Good morning 👋</p>
-            <h2 className="text-xl font-semibold mt-0.5">Ready to study?</h2>
+            <h2 className="text-xl font-bold mt-0.5">Ready to study?</h2>
             <p className="text-blue-100 text-sm mt-1">You have 3 pending quizzes today</p>
           </div>
           <div className="text-right">
@@ -144,10 +145,10 @@ const DashboardTab = ({ setActiveTab }) => {
             <p className="text-xs text-blue-200">day streak</p>
           </div>
         </div>
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-4 relative">
           {days.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${completed[i] ? "bg-white text-blue-600" : "bg-blue-500/50 text-blue-200"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${completed[i] ? "bg-white text-blue-600 shadow-sm" : "bg-white/15 text-blue-100"}`}>
                 {completed[i] ? <Icon name="check" size={14} /> : d}
               </div>
               <span className="text-xs text-blue-200">{d}</span>
@@ -166,7 +167,7 @@ const DashboardTab = ({ setActiveTab }) => {
 
       {/* Quick actions */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h3>
+        <h3 className="text-sm font-bold text-gray-800 mb-3">Quick Actions</h3>
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Generate Quiz", sub: "From PDF or Photo", icon: "spark", tab: "quiz", color: "bg-blue-50 text-blue-600" },
@@ -179,7 +180,7 @@ const DashboardTab = ({ setActiveTab }) => {
                 <Icon name={a.icon} size={18} />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-800">{a.label}</p>
+                <p className="text-sm font-semibold text-gray-800">{a.label}</p>
                 <p className="text-xs text-gray-400">{a.sub}</p>
               </div>
             </Card>
@@ -190,8 +191,8 @@ const DashboardTab = ({ setActiveTab }) => {
       {/* To-do list */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-gray-700">Today's Targets</h3>
-          <button className="text-blue-600 hover:text-blue-700">
+          <h3 className="text-sm font-bold text-gray-800">Today's Targets</h3>
+          <button className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg p-1 transition-colors">
             <Icon name="plus" size={16} />
           </button>
         </div>
@@ -214,7 +215,7 @@ const DashboardTab = ({ setActiveTab }) => {
 
       {/* Weakness analytics */}
       <Card>
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Weakness Analytics</h3>
+        <h3 className="text-sm font-bold text-gray-800 mb-4">Weakness Analytics</h3>
         <div className="space-y-3">
           {[
             { subject: "Modern History", pct: 45, color: "bg-red-400" },
@@ -224,11 +225,11 @@ const DashboardTab = ({ setActiveTab }) => {
           ].map((s) => (
             <div key={s.subject}>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-gray-600">{s.subject}</span>
+                <span className="text-gray-600 font-medium">{s.subject}</span>
                 <span className="text-gray-400">{s.pct}%</span>
               </div>
               <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${s.color}`} style={{ width: `${s.pct}%` }} />
+                <div className={`h-full rounded-full ${s.color} transition-all duration-500`} style={{ width: `${s.pct}%` }} />
               </div>
             </div>
           ))}
@@ -237,7 +238,7 @@ const DashboardTab = ({ setActiveTab }) => {
 
       {/* Exam Date Tracker */}
       <Card>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Exam Date Tracker</h3>
+        <h3 className="text-sm font-bold text-gray-800 mb-3">Exam Date Tracker</h3>
         <div className="space-y-2">
           {[
             { exam: "UPSC Prelims 2025", date: "26 May 2025", days: 14, color: "red" },
@@ -246,7 +247,7 @@ const DashboardTab = ({ setActiveTab }) => {
           ].map((e) => (
             <div key={e.exam} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
               <div>
-                <p className="text-sm font-medium text-gray-800">{e.exam}</p>
+                <p className="text-sm font-semibold text-gray-800">{e.exam}</p>
                 <p className="text-xs text-gray-400">{e.date}</p>
               </div>
               <Badge color={e.color}>{e.days}d left</Badge>
@@ -913,23 +914,23 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Top nav */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <header className="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm shadow-blue-600/30">
               <span className="text-white text-xs font-bold">EB</span>
             </div>
-            <span className="font-semibold text-gray-900 text-sm">ExamBuddy</span>
+            <span className="font-bold text-gray-900 text-sm tracking-tight">ExamBuddy</span>
           </div>
           <div className="flex items-center gap-3">
-            <button className="text-gray-400 hover:text-gray-600 relative">
+            <button className="text-gray-400 hover:text-gray-600 transition-colors relative">
               <Icon name="bell" size={20} />
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
             </button>
-            <button className="text-gray-400 hover:text-gray-600">
+            <button className="text-gray-400 hover:text-gray-600 transition-colors">
               <Icon name="search" size={20} />
             </button>
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 text-xs font-semibold">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center text-blue-700 text-xs font-bold ring-1 ring-blue-100">
               Me
             </div>
           </div>
@@ -942,14 +943,14 @@ export default function Page() {
       </main>
 
       {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 z-40">
         <div className="max-w-lg mx-auto px-2">
           <div className="flex">
             {TABS.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${activeTab === tab.id ? "text-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
-                <Icon name={tab.icon} size={activeTab === tab.id ? 22 : 20} />
-                <span className={`text-[10px] font-medium leading-tight ${activeTab === tab.id ? "text-blue-600" : ""}`}>
+                <Icon name={tab.icon} size={activeTab === tab.id ? 22 : 20} className={activeTab === tab.id ? "drop-shadow-sm" : ""} />
+                <span className={`text-[10px] font-medium leading-tight ${activeTab === tab.id ? "text-blue-600 font-semibold" : ""}`}>
                   {tab.label.split(" ")[0]}
                 </span>
                 {activeTab === tab.id && <span className="w-1 h-1 bg-blue-600 rounded-full" />}
