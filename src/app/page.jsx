@@ -589,17 +589,19 @@ const DoubtTab = () => {
     setMessages(prev => [...prev, { role: "user", text: userMsg }]);
     setLoading(true);
     try {
-      const res = await fetch("/api/ask", {
+      // Build history for context (last 6 messages)
+      const history = messages.slice(-6).map(m => ({ role: m.role, text: m.text }));
+      const res = await fetch("/api/doubt-solver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg }),
+        body: JSON.stringify({ question: userMsg, history }),
       });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
       const text = data.answer || "Sorry, I could not get a response.";
       setMessages(prev => [...prev, { role: "ai", text }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: "ai", text: `Connection error: ${err.message}. Please check your API route at /api/ask.` }]);
+      setMessages(prev => [...prev, { role: "ai", text: `Connection error: ${err.message}. Please try again.` }]);
     }
     setLoading(false);
   };
