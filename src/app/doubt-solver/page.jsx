@@ -11,28 +11,54 @@ const QUICK_TOPICS = [
   '🏛️ ગુપ્ત સામ્રાજ્ય ક્યારે હતું?',
 ];
 
+const INITIAL_MESSAGE = {
+  role: 'assistant',
+  text: 'નમસ્તે! 👋 હું ExamBuddy AI Doubt Solver છું.\n\nGPSC, UPSC, TET, TAT, Police, Constable — કોઈ પણ exam ના doubt પૂછો. Gujarati અથવા English — બંને ચાલે! 🎯',
+};
+
 export default function DoubtSolverPage() {
   const router = useRouter();
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      text: 'નમસ્તે! 👋 હું ExamBuddy AI Doubt Solver છું.\n\nGPSC, UPSC, TET, TAT, Police, Constable — કોઈ પણ exam ના doubt પૂછો. Gujarati અથવા English — બંને ચાલે! 🎯',
-    },
-  ]);
+  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
 
+  // 1. લોકલ સ્ટોરેજમાંથી જૂની ચેટ હિસ્ટ્રી લોડ કરવા માટે (ફક્ત ક્લાયન્ટ સાઇડ પર)
   useEffect(() => {
+    const savedChats = localStorage.getItem('exambuddy_chat_history');
+    if (savedChats) {
+      try {
+        setMessages(JSON.parse(savedChats));
+      } catch (e) {
+        console.error("Error parsing chat history:", e);
+      }
+    }
+  }, []);
+
+  // 2. જ્યારે પણ કોઈ નવો મેસેજ આવે ત્યારે તેને localStorage માં સેવ કરવા માટે
+  useEffect(() => {
+    if (messages.length > 1) {
+      localStorage.setItem('exambuddy_chat_history', JSON.stringify(messages));
+    }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // 3. ચેટ ક્લિયર કરવા માટેનું ફંક્શન (યુઝર માટે હેલ્પફુલ રહેશે)
+  const clearChat = () => {
+    if (window.confirm("શું તમે આ ચેટ હિસ્ટ્રી ડીલીટ કરવા માંગો છો?")) {
+      localStorage.removeItem('exambuddy_chat_history');
+      setMessages([INITIAL_MESSAGE]);
+    }
+  };
+
   const sendMessage = async (text) => {
     const question = (text || input).trim();
-    if (!question) return;
+    if (!question || loading) return;
 
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', text: question }]);
+    // યુઝરનો મેસેજ સ્ટેટમાં ઉમેરો
+    const updatedMessagesWithUser = [...messages, { role: 'user', text: question }];
+    setMessages(updatedMessagesWithUser);
     setLoading(true);
 
     try {
@@ -41,28 +67,43 @@ export default function DoubtSolverPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question,
-          history: messages.slice(-6), // last 6 messages for context
+          history: updatedMessagesWithUser.slice(-6), // સચોટ કોન્ટેક્સ્ટ માટે છેલ્લે અપડેટ થયેલી હિસ્ટ્રી મોકલો
         }),
       });
+      
       const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || "Server error");
+
       setMessages(prev => [...prev, { role: 'assistant', text: data.answer || 'જવાબ મળ્યો નહીં, ફરી try કરો.' }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', text: '⚠️ Error આવ્યો. Internet connection check કરો.' }]);
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [...prev, { role: 'assistant', text: '⚠️ Error આવ્યો. Internet connection check કરો અથવા થોડીવાર પછી ટ્રાય કરો.' }]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: 'white', fontFamily: 'system-ui', display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
-      <div style={{ background: '#1e293b', borderBottom: '1px solid #334155', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 50 }}>
-        <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '20px', padding: '0 4px' }}>←</button>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#0ea5e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🤖</div>
-        <div>
-          <div style={{ fontWeight: '800', fontSize: '15px' }}>AI Doubt Solver</div>
-          <div style={{ fontSize: '11px', color: '#10b981', fontWeight: '600' }}>● Online — Gemini AI</div>
+      <div style={{ background: '#1e293b', borderBottom: '1px solid #334155', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'between', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '20px', padding: '0 4px' }}>←</button>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#0ea5e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🤖</div>
+          <div>
+            <div style={{ fontWeight: '800', fontSize: '15px' }}>AI Doubt Solver</div>
+            <div style={{ fontSize: '11px', color: '#10b981', fontWeight: '600' }}>● Online — Gemini AI</div>
+          </div>
         </div>
+        
+        {/* Clear Chat Button */}
+        {messages.length > 1 && (
+          <button onClick={clearChat} style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '4px 10px', color: '#fca5a5', fontSize: '12px', cursor: 'pointer', fontWeight: '600', marginLeft: 'auto' }}>
+            🗑️ Clear Chat
+          </button>
+        )}
       </div>
 
       {/* Quick Topics */}

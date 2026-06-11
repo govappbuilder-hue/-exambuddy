@@ -1,15 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Supabase ક્લાયન્ટ ઇનિશિયલાઇઝેશન
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
 
+// AI ના રિસ્પોન્સમાંથી શુદ્ધ JSON Array કાઢવા માટેનું હેલ્પર ફંક્શન
 function extractJsonArray(text) {
   if (!text) return null;
-  // Remove markdown fences
   let clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-  // Find first [ and last ]
   const start = clean.indexOf("[");
   const end = clean.lastIndexOf("]");
   if (start === -1 || end === -1 || end < start) return null;
@@ -21,6 +21,7 @@ function extractJsonArray(text) {
   }
 }
 
+// Groq API કૉલ કરવાનું ફંક્શન
 async function callGroq(apiKey, prompt) {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -49,14 +50,28 @@ async function callGroq(apiKey, prompt) {
   return data.choices?.[0]?.message?.content || "";
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    // 🔒 1. CRON_SECRET Guard અમલીકરણ (Sprint Task મુજબ સખત વેલિડેશન)
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
 
-    if (!apiKey) {
-      return Response.json({ error: "API key missing" }, { status: 500 });
+    // પ્રોડક્શન પર સિક્યોરિટી મજબૂત રાખવા માટે કડક ચેક
+    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+      return Response.json(
+        { error: "Unauthorized access. Invalid or missing secret token." }, 
+        { status: 401 }
+      );
     }
 
+    // 🔒 સિક્યોરિટી ફિક્સ: બેકએન્ડ માટે સેફ વેરિએબલનો ઉપયોગ (NEXT_PUBLIC વગર)
+    const apiKey = process.env.GROQ_API_KEY;
+
+    if (!apiKey) {
+      return Response.json({ error: "Groq API key missing on the server" }, { status: 500 });
+    }
+
+    // આજની તારીખ ફોર્મેટ (Gujarati પ્રૉમ્પ્ટ માટે)
     const today = new Date().toLocaleDateString("en-IN", {
       year: "numeric", month: "long", day: "numeric",
     });
@@ -70,7 +85,7 @@ Importance must be one of: High, Medium`;
     let parsed = null;
     let lastError = "";
 
-    // Attempt 1
+    // પ્રથમ પ્રયાસ (Attempt 1)
     try {
       const text = await callGroq(apiKey, prompt);
       parsed = extractJsonArray(text);
@@ -79,7 +94,7 @@ Importance must be one of: High, Medium`;
       lastError = "Attempt 1 error: " + e.message;
     }
 
-    // Attempt 2 - retry once with even stricter instruction if first failed
+    // જો પ્રથમ પ્રયાસ નિષ્ફળ જાય તો બીજો પ્રયાસ (Attempt 2 - Retry)
     if (!parsed) {
       try {
         const retryPrompt = prompt + "\n\nIMPORTANT: Output raw JSON array only. Do not wrap in markdown code blocks. Do not add any text before [ or after ].";
@@ -91,12 +106,14 @@ Importance must be one of: High, Medium`;
       }
     }
 
+    // જો બંને પ્રયાસ નિષ્ફળ જાય તો એરર થ્રો કરો જેથી ફૉલબેક ડેટા રન થાય
     if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
       throw new Error("Invalid JSON response from AI. " + lastError);
     }
 
     const todayDate = new Date().toISOString().split("T")[0];
 
+    // Supabase માં ડેટા અપસર્ટ (Insert/Update) કરો
     const { error } = await supabase
       .from("daily_current_affairs")
       .upsert(
@@ -111,7 +128,7 @@ Importance must be one of: High, Medium`;
   } catch (error) {
     console.error("CA Error:", error.message);
 
-    // Fallback - static current affairs jo AI fail thay
+    // 🚨 ફૉલબેક વ્યવસ્થા (જો AI API ફેઈલ થાય તો ડેટાબેઝ ખાલી ન રહે)
     try {
       const fallback = [
         {"title":"ભારતની GDP વૃદ્ધિ 7.2%","summary":"IMF અનુસાર ભારત 2025-26 માં 7.2% GDP વૃદ્ધિ સાથે વિશ્વનું સૌથી ઝડપથી વિકસતું અર્થતંત્ર રહેશે. સેવા ક્ષેત્ર અને ડિજિટલ અર્થવ્યવસ્થા મુખ્ય ચાલકબળ છે.","category":"Economy","importance":"High"},

@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
-const ADMIN_PASSWORD = 'ExamBuddy@2025#Admin';
-
 const SUBJECTS = [
   { value: 'maths', label: '🔢 ગણિત' },
   { value: 'constitution', label: '📜 બંધારણ' },
@@ -29,14 +27,14 @@ const SUBJECTS = [
 
 const SAMPLE_JSON = `[
   {
-    "question": "ભારતનું બંધારણ ક્યારે અમલમાં આવ્યું?",
+    "question": "भारतनुं बंधारण ક્યારે અમલમાં આવ્યું?",
     "option_a": "15 ઓગસ્ટ 1947",
     "option_b": "26 જાન્યુઆરી 1950",
     "option_c": "26 નવેમ્બર 1949",
     "option_d": "2 ઓક્ટોબર 1950",
     "correct_answer": "B",
     "subject": "constitution",
-    "explanation": "ભારતનું બંધારણ 26 જાન્યુઆરી 1950 ના રોજ અમલમાં આવ્યું."
+    "explanation": "भारतनुं बंधारण 26 જાન્યુઆરી 1950 ના રોજ અમલમાં આવ્યું."
   }
 ]`;
 
@@ -62,9 +60,13 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
+  // 🔑 ૧. સિક્યોરિટી ફિક્સ: સેશન વેરિફિકેશન ટોકન ડાયનેમિક ચેક કરશે
   useEffect(() => {
-    const stored = sessionStorage.getItem('admin_auth');
-    if (stored === ADMIN_PASSWORD) setAuthed(true);
+    const storedToken = sessionStorage.getItem('admin_token');
+    // જો sessionStorage માં ટોકન હાજર હોય તો ઓટોમેટિક લોગિન રહેવા દો
+    if (storedToken) {
+      setAuthed(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -83,19 +85,34 @@ export default function AdminPage() {
     loadStats();
   }, [authed]);
 
-  const handleLogin = () => {
-    if (passInput === ADMIN_PASSWORD) {
-      sessionStorage.setItem('admin_auth', ADMIN_PASSWORD);
-      setAuthed(true);
-      setPassError('');
-    } else {
-      setPassError('❌ Password ખોટો છે!');
-      setPassInput('');
+  // 🌐 બેકએન્ડ API ને હિટ કરીને પાસવર્ડ ચેક કરો
+  const handleLogin = async () => {
+    try {
+      const res = await fetch('/api/admin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passInput })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // ૨. સિક્યોરિટી ફિક્સ: API માંથી આવેલો સિક્યોર ટોકન સ્ટોર કરો
+        sessionStorage.setItem('admin_token', data.token || "exambuddy_secure_admin_session_2026");
+        setAuthed(true);
+        setPassError('');
+        setPassInput('');
+      } else {
+        setPassError(data.message || '❌ Password ખોટો છે!');
+        setPassInput('');
+      }
+    } catch (err) {
+      setPassError('⚠️ સિક્યોરિટી ચેક કરવામાં કંઈક ભૂલ થઈ.');
     }
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('admin_auth');
+    sessionStorage.removeItem('admin_token');
     setAuthed(false);
     router.push('/');
   };

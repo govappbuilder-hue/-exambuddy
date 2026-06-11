@@ -1,44 +1,51 @@
-// src/app/api/doubt-solver/route.js
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(
-  process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
-);
+// Security check: API key properly verify thay chhe ke nahi
+const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+const genAI = new GoogleGenAI({ apiKey });
 
 export async function POST(request) {
   try {
-    const { question, history = [] } = await request.json();
-    if (!question) return Response.json({ error: "No question" }, { status: 400 });
+    const { question, history } = await request.json();
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    if (!question) {
+      return Response.json({ error: "No question provided" }, { status: 400 });
+    }
+    if (!apiKey) {
+      return Response.json({ error: "Gemini API key is missing on the server" }, { status: 500 });
+    }
+
+    // Sprint task: Updated to gemini-2.0-flash-lite
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
     // Build conversation context from history
     const contextLines = history
-      .slice(-4)
-      .map(m => `${m.role === 'user' ? 'Student' : 'Teacher'}: ${m.text}`)
-      .join('\n');
+      ? history
+          .slice(-4)
+          .map((m) => `${m.role === 'user' ? 'Student' : 'Teacher'}: ${m.text}`)
+          .join('\n')
+      : "";
 
-    const systemContext = `તું ExamBuddy નો AI Doubt Solver Teacher છે. 
-તારો role: Gujarat ના government exam students (GPSC, UPSC, TET, TAT, Police, Constable, Clerk) ના doubts clear કરવા.
+    const systemContext = `તમે ExamBuddy ના AI Doubt Solver Teacher છો.
+તમારો રોલ: Gujarat ના government exam students (GPSC, UPSC, TET, TAT, Police, Constable, Clerk) ના doubts clear કરવાનો છે.
 
 Rules:
-- Gujarati ભાષા માં સ્પષ્ટ, simple explanation આપ
-- Examples અને mnemonics use કર
-- Important points bold style (caps) માં highlight કર
-- Exam-relevant tips include કર
-- Maximum 300-400 words
-- Student English માં પૂછે તો English + Gujarati mix કરી શકો`;
+- Gujarati ભાષામાં જ સરળ, simple explanation આપવું.
+- Examples અને mnemonics નો ઉપયોગ કરવો.
+- Important points bold style (markdown) માં highlight કરવા.
+- Exam-relevant tips include કરવી.
+- Maximum 300-400 words.
+- Student English માં પૂછે તો પણ English + Gujarati mix માં જ ઉત્તર આપવો.`;
 
-    const prompt = contextLines
-      ? `${systemContext}\n\nPrevious conversation:\n${contextLines}\n\nStudent's current question: ${question}`
-      : `${systemContext}\n\nStudent's question: ${question}`;
+    const prompt = `${systemContext}\n\nPrevious conversation:\n${contextLines}\n\nStudent's current question: ${question}`;
 
     const result = await model.generateContent(prompt);
-    const answer = result.response.text();
+    // Correct way to get text in standard SDK
+    const answer = result.response.text(); 
 
     return Response.json({ answer });
   } catch (error) {
     console.error("Doubt solver error:", error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
