@@ -172,7 +172,7 @@ export default function PremiumApp() {
     </div>
   );
 
-  // ─── LOGGED IN — 5 TAB APP ───
+  // ─── LOGGED IN — 6 TAB APP ───
   return (
     <div style={{ minHeight: "100vh", background: "#030712", color: "white", fontFamily: "system-ui", paddingBottom: "80px" }}>
 
@@ -189,7 +189,6 @@ export default function PremiumApp() {
         {/* ═══ TAB 1: HOME ═══ */}
         {activeTab === "home" && (
           <div>
-            {/* Welcome Card */}
             <div style={{ background: "linear-gradient(135deg,#1e1b4b,#0f172a)", padding: "22px", borderRadius: "20px", border: "1px solid #312e81", marginBottom: "22px" }}>
               <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#a5b4fc", margin: "0 0 4px" }}>નમસ્તે! 👋</h2>
               <p style={{ color: "#64748b", margin: 0, fontSize: "13px" }}>આજે કયા વિષયની પ્રેક્ટિસ કરીએ?</p>
@@ -207,6 +206,22 @@ export default function PremiumApp() {
               </div>
             </div>
 
+            {/* Quick Actions */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+              <button onClick={() => setActiveTab("doubt")}
+                style={{ background: "linear-gradient(135deg,#1e1b4b,#0f172a)", border: "1px solid #312e81", padding: "14px", borderRadius: "14px", color: "white", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ fontSize: "22px", marginBottom: "4px" }}>🤔</div>
+                <div style={{ fontSize: "13px", fontWeight: "700", color: "#a5b4fc" }}>Doubt Solver</div>
+                <div style={{ fontSize: "11px", color: "#475569" }}>AI Teacher</div>
+              </button>
+              <button onClick={() => setActiveTab("flashcards")}
+                style={{ background: "linear-gradient(135deg,#0c1a1a,#0f172a)", border: "1px solid #134e4a", padding: "14px", borderRadius: "14px", color: "white", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ fontSize: "22px", marginBottom: "4px" }}>🃏</div>
+                <div style={{ fontSize: "13px", fontWeight: "700", color: "#2dd4bf" }}>Flashcards</div>
+                <div style={{ fontSize: "11px", color: "#475569" }}>Quick Revise</div>
+              </button>
+            </div>
+
             {/* Subject Filter */}
             <div style={{ display: "flex", gap: "8px", overflowX: "auto", marginBottom: "16px", paddingBottom: "4px" }}>
               {EXAM_FILTER_TAGS.map(tag => (
@@ -217,12 +232,11 @@ export default function PremiumApp() {
               ))}
             </div>
 
-            {/* Subjects Grid */}
             <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "12px", color: "#e2e8f0" }}>📚 વિષયો — Quiz Practice</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               {filteredSubjects.map(sub => (
                 <div key={sub.id} onClick={() => router.push(`/quiz/${sub.id}`)}
-                  style={{ background: "#0f172a", border: "1px solid #1e2937", padding: "16px", borderRadius: "16px", cursor: "pointer", transition: "all 0.2s" }}>
+                  style={{ background: "#0f172a", border: "1px solid #1e2937", padding: "16px", borderRadius: "16px", cursor: "pointer" }}>
                   <div style={{ fontSize: "28px", marginBottom: "8px" }}>{sub.icon}</div>
                   <h4 style={{ fontSize: "15px", fontWeight: "700", margin: "0 0 3px", color: "#f1f5f9" }}>{sub.name}</h4>
                   <p style={{ fontSize: "11px", color: "#475569", margin: "0 0 6px" }}>{sub.count}</p>
@@ -234,9 +248,7 @@ export default function PremiumApp() {
         )}
 
         {/* ═══ TAB 2: CURRENT AFFAIRS ═══ */}
-        {activeTab === "current" && (
-          <CurrentAffairsTab />
-        )}
+        {activeTab === "current" && <CurrentAffairsTab />}
 
         {/* ═══ TAB 3: MOCK TEST ═══ */}
         {activeTab === "mock" && (
@@ -258,7 +270,6 @@ export default function PremiumApp() {
               ))}
             </div>
 
-            {/* Progress Section */}
             <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "28px 0 16px", color: "#e2e8f0" }}>📊 Progress</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "20px" }}>
               {[
@@ -280,47 +291,13 @@ export default function PremiumApp() {
           </div>
         )}
 
-        {/* ═══ TAB 4: EXAM DATES ═══ */}
-        {activeTab === "exams" && (
-          <div>
-            <h3 style={{ fontSize: "18px", fontWeight: "800", marginBottom: "16px", color: "#e2e8f0" }}>📅 આવનારી પરીક્ષાઓ</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
-              {EXAM_DATES.map((exam, i) => (
-                <div key={i} style={{ background: "#0f172a", border: "1px solid #1e2937", padding: "16px 20px", borderRadius: "14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <h4 style={{ margin: "0 0 3px", fontSize: "15px", fontWeight: "700", color: "#f1f5f9" }}>{exam.name}</h4>
-                    <span style={{ fontSize: "11px", color: "#64748b" }}>Notification: Coming Soon</span>
-                  </div>
-                  <span style={{ background: "#7f1d1d", color: "#fca5a5", fontSize: "12px", padding: "5px 11px", borderRadius: "8px", fontWeight: "700" }}>{exam.date}</span>
-                </div>
-              ))}
-            </div>
+        {/* ═══ TAB 4: DOUBT SOLVER ═══ */}
+        {activeTab === "doubt" && <DoubSolverTab />}
 
-            <div style={{ background: "#0f172a", border: "1px solid #1e2937", borderRadius: "16px", padding: "20px" }}>
-              <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontWeight: "700" }}>📋 Form Filling Tips</h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {[
-                  "OJAS Portal par Register karvu jaruri che",
-                  "Valid Email ane Mobile number ready rakhvo",
-                  "Photo ane Signature 20-50KB ma hovi joiye",
-                  "Form submit karta pahela preview check karo",
-                  "Application number note karvo",
-                ].map((tip, i) => (
-                  <div key={i} style={{ display: "flex", gap: "8px", fontSize: "13px", color: "#94a3b8", lineHeight: 1.5 }}>
-                    <span style={{ color: "#38bdf8", fontWeight: "700", flexShrink: 0 }}>→</span>
-                    <span>{tip}</span>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => window.open("https://ojas.gujarat.gov.in", "_blank")}
-                style={{ width: "100%", marginTop: "16px", padding: "12px", background: "linear-gradient(90deg,#0ea5e9,#2563eb)", color: "white", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: "pointer" }}>
-                🔗 OJAS Portal ખોલો
-              </button>
-            </div>
-          </div>
-        )}
+        {/* ═══ TAB 5: FLASHCARDS ═══ */}
+        {activeTab === "flashcards" && <FlashcardsTab />}
 
-        {/* ═══ TAB 5: PROFILE ═══ */}
+        {/* ═══ TAB 6: PROFILE ═══ */}
         {activeTab === "profile" && (
           <div>
             <div style={{ background: "linear-gradient(135deg,#1e1b4b,#0f172a)", padding: "24px", borderRadius: "20px", border: "1px solid #312e81", marginBottom: "20px", textAlign: "center" }}>
@@ -348,6 +325,10 @@ export default function PremiumApp() {
                 style={{ width: "100%", padding: "13px", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: "700", cursor: "pointer" }}>
                 📊 Detailed Progress
               </button>
+              <button onClick={() => router.push("/analytics")}
+                style={{ width: "100%", padding: "13px", background: "#0f172a", color: "#38bdf8", border: "1px solid #1e2937", borderRadius: "12px", fontSize: "14px", cursor: "pointer" }}>
+                📈 Analytics જુઓ
+              </button>
               <button onClick={() => router.push("/admin")}
                 style={{ width: "100%", padding: "13px", background: "#1e293b", color: "#94a3b8", border: "1px solid #334155", borderRadius: "12px", fontSize: "14px", cursor: "pointer" }}>
                 🛡️ Admin Panel
@@ -361,20 +342,21 @@ export default function PremiumApp() {
         )}
       </div>
 
-      {/* ═══ BOTTOM NAV — 5 TABS ═══ */}
+      {/* ═══ BOTTOM NAV — 6 TABS ═══ */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(3,7,18,0.97)", backdropFilter: "blur(16px)", borderTop: "1px solid #1f2937", padding: "8px 0 12px", zIndex: 100 }}>
         <div style={{ maxWidth: "500px", margin: "0 auto", display: "flex", justifyContent: "space-around" }}>
           {[
             { id: "home", icon: "🏠", label: "Home" },
             { id: "current", icon: "📰", label: "Affairs" },
             { id: "mock", icon: "🏆", label: "Mock" },
-            { id: "exams", icon: "📅", label: "Exams" },
+            { id: "doubt", icon: "🤔", label: "Doubt" },
+            { id: "flashcards", icon: "🃏", label: "Cards" },
             { id: "profile", icon: "👤", label: "Profile" },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: activeTab === tab.id ? "#38bdf8" : "#475569", cursor: "pointer", padding: "4px 8px", borderRadius: "10px", transition: "all 0.2s", minWidth: "52px" }}>
-              <span style={{ fontSize: "19px", filter: activeTab === tab.id ? "none" : "grayscale(0.5)" }}>{tab.icon}</span>
-              <span style={{ fontSize: "10px", fontWeight: activeTab === tab.id ? "700" : "500" }}>{tab.label}</span>
+              style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", color: activeTab === tab.id ? "#38bdf8" : "#475569", cursor: "pointer", padding: "4px 6px", borderRadius: "10px", minWidth: "44px" }}>
+              <span style={{ fontSize: "18px", filter: activeTab === tab.id ? "none" : "grayscale(0.5)" }}>{tab.icon}</span>
+              <span style={{ fontSize: "9px", fontWeight: activeTab === tab.id ? "700" : "500" }}>{tab.label}</span>
               {activeTab === tab.id && <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#38bdf8" }} />}
             </button>
           ))}
@@ -384,7 +366,7 @@ export default function PremiumApp() {
   );
 }
 
-// ─── CURRENT AFFAIRS INLINE TAB ───
+// ─── CURRENT AFFAIRS TAB ───
 function CurrentAffairsTab() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -418,7 +400,6 @@ function CurrentAffairsTab() {
         <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#e2e8f0" }}>📰 આજના Current Affairs</h3>
         <span style={{ fontSize: "12px", color: "#475569" }}>{new Date().toLocaleDateString("gu-IN")}</span>
       </div>
-
       {articles.length === 0 ? (
         <div style={{ textAlign: "center", padding: "50px 20px" }}>
           <div style={{ fontSize: "60px", marginBottom: "16px" }}>🤖</div>
@@ -449,6 +430,171 @@ function CurrentAffairsTab() {
               <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8", lineHeight: 1.6 }}>{a.summary}</p>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── DOUBT SOLVER TAB ───
+function DoubSolverTab() {
+  const [question, setQuestion] = useState("");
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const askDoubt = async () => {
+    if (!question.trim() || loading) return;
+    const q = question.trim();
+    setQuestion("");
+    setLoading(true);
+    const newHistory = [...history, { role: "user", text: q }];
+    setHistory(newHistory);
+    try {
+      const res = await fetch("/api/doubt-solver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, history }),
+      });
+      const data = await res.json();
+      setHistory([...newHistory, { role: "ai", text: data.answer || "❌ Error આવ્યો" }]);
+    } catch {
+      setHistory([...newHistory, { role: "ai", text: "❌ Network error" }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <h3 style={{ fontSize: "18px", fontWeight: "800", marginBottom: "4px", color: "#e2e8f0" }}>🤔 AI Doubt Solver</h3>
+      <p style={{ fontSize: "13px", color: "#475569", marginBottom: "16px" }}>Gujarati Teacher — GPSC, UPSC, TET</p>
+
+      <div style={{ background: "#0f172a", border: "1px solid #1e2937", borderRadius: "16px", padding: "16px", minHeight: "300px", maxHeight: "450px", overflowY: "auto", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+        {history.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "#475569" }}>
+            <div style={{ fontSize: "50px", marginBottom: "12px" }}>🤖</div>
+            <p style={{ fontSize: "14px" }}>કોઈ પણ exam સવાલ પૂછો!</p>
+            <p style={{ fontSize: "12px" }}>ઉદા: "ભારતનું બંધારણ ક્યારે લાગુ થયું?"</p>
+          </div>
+        )}
+        {history.map((msg, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+            <div style={{
+              maxWidth: "85%", padding: "10px 14px", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+              background: msg.role === "user" ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "#1e293b",
+              color: "white", fontSize: "13px", lineHeight: 1.6,
+              border: msg.role === "ai" ? "1px solid #334155" : "none"
+            }}>
+              {msg.role === "ai" && <div style={{ fontSize: "11px", color: "#38bdf8", fontWeight: "700", marginBottom: "4px" }}>🤖 AI Teacher</div>}
+              <div style={{ whiteSpace: "pre-wrap" }}>{msg.text}</div>
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "10px 14px", borderRadius: "16px 16px 16px 4px", color: "#38bdf8", fontSize: "13px" }}>
+              ⏳ AI વિચારી રહ્યું છે...
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: "8px" }}>
+        <input
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && askDoubt()}
+          placeholder="સવાલ લખો..."
+          style={{ flex: 1, padding: "12px 16px", background: "#0f172a", border: "1px solid #1e2937", borderRadius: "12px", color: "white", fontSize: "14px", outline: "none" }}
+        />
+        <button onClick={askDoubt} disabled={loading || !question.trim()}
+          style={{ padding: "12px 18px", background: loading ? "#334155" : "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", borderRadius: "12px", color: "white", fontSize: "18px", cursor: loading ? "not-allowed" : "pointer" }}>
+          ➤
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── FLASHCARDS TAB ───
+function FlashcardsTab() {
+  const [topic, setTopic] = useState("");
+  const [cards, setCards] = useState([]);
+  const [current, setCurrent] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const generateCards = async () => {
+    if (!topic.trim() || loading) return;
+    setLoading(true);
+    setCards([]);
+    setFlipped(false);
+    setCurrent(0);
+    try {
+      const res = await fetch("/api/generate-flashcards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic }),
+      });
+      const data = await res.json();
+      if (data.flashcards) setCards(data.flashcards);
+    } catch { }
+    setLoading(false);
+  };
+
+  const next = () => { if (current < cards.length - 1) { setCurrent(c => c + 1); setFlipped(false); } };
+  const prev = () => { if (current > 0) { setCurrent(c => c - 1); setFlipped(false); } };
+
+  return (
+    <div>
+      <h3 style={{ fontSize: "18px", fontWeight: "800", marginBottom: "4px", color: "#e2e8f0" }}>🃏 AI Flashcards</h3>
+      <p style={{ fontSize: "13px", color: "#475569", marginBottom: "16px" }}>Topic લખો — AI cards બનાવશે</p>
+
+      <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+        <input
+          value={topic}
+          onChange={e => setTopic(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && generateCards()}
+          placeholder="ઉ.દા: Indian Constitution, Gujarat History..."
+          style={{ flex: 1, padding: "12px 16px", background: "#0f172a", border: "1px solid #1e2937", borderRadius: "12px", color: "white", fontSize: "14px", outline: "none" }}
+        />
+        <button onClick={generateCards} disabled={loading || !topic.trim()}
+          style={{ padding: "12px 18px", background: loading ? "#334155" : "linear-gradient(135deg,#0ea5e9,#2563eb)", border: "none", borderRadius: "12px", color: "white", fontSize: "14px", fontWeight: "700", cursor: loading ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>
+          {loading ? "⏳" : "✨ Generate"}
+        </button>
+      </div>
+
+      {cards.length > 0 && (
+        <div>
+          <div style={{ textAlign: "center", marginBottom: "12px", fontSize: "13px", color: "#475569" }}>
+            Card {current + 1} / {cards.length}
+          </div>
+          <div onClick={() => setFlipped(f => !f)}
+            style={{ background: flipped ? "linear-gradient(135deg,#064e3b,#0f172a)" : "linear-gradient(135deg,#1e1b4b,#0f172a)", border: `1px solid ${flipped ? "#065f46" : "#312e81"}`, borderRadius: "20px", padding: "32px 24px", minHeight: "180px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", marginBottom: "16px", transition: "all 0.3s" }}>
+            <div style={{ fontSize: "11px", color: flipped ? "#6ee7b7" : "#818cf8", fontWeight: "700", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "1px" }}>
+              {flipped ? "✅ ANSWER" : "❓ QUESTION"}
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: "700", color: "#f1f5f9", lineHeight: 1.5 }}>
+              {flipped ? cards[current]?.answer : cards[current]?.question}
+            </div>
+            <div style={{ fontSize: "11px", color: "#475569", marginTop: "16px" }}>tap to {flipped ? "question" : "answer"}</div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button onClick={prev} disabled={current === 0}
+              style={{ flex: 1, padding: "12px", background: "#0f172a", border: "1px solid #1e2937", borderRadius: "12px", color: current === 0 ? "#334155" : "#94a3b8", fontSize: "14px", cursor: current === 0 ? "not-allowed" : "pointer" }}>
+              ← Prev
+            </button>
+            <button onClick={next} disabled={current === cards.length - 1}
+              style={{ flex: 1, padding: "12px", background: current === cards.length - 1 ? "#0f172a" : "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "1px solid #1e2937", borderRadius: "12px", color: current === cards.length - 1 ? "#334155" : "white", fontSize: "14px", fontWeight: "700", cursor: current === cards.length - 1 ? "not-allowed" : "pointer" }}>
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!loading && cards.length === 0 && topic && (
+        <div style={{ textAlign: "center", padding: "30px", color: "#475569", fontSize: "13px" }}>
+          ऊपर Generate button dabao!
         </div>
       )}
     </div>
