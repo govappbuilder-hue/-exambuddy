@@ -1,10 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(apiKey);
-
 export async function POST(request) {
   try {
+    // ✅ FIX: apiKey inside function so it reads fresh on each request
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+
     const { question, history } = await request.json();
 
     if (!question) {
@@ -14,7 +14,9 @@ export async function POST(request) {
       return Response.json({ error: "Gemini API key is missing on the server" }, { status: 500 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // ✅ FIX: gemini-2.0-flash-lite -> gemini-2.0-flash (correct model name)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const contextLines = history
       ? history
