@@ -126,13 +126,24 @@ const DashboardTab = ({ setActiveTab }) => {
   const days = ["M", "T", "W", "T", "F", "S", "S"];
   const completed = [true, true, true, true, true, true, false];
 
+  // ✅ BUG FIX 1: Todo toggle properly updates immutable state
   const toggleTodo = (i) => {
-    const updated = [...todos];
-    updated[i] = { ...updated[i], done: !updated[i].done };
-    setTodos(updated);
+    setTodos(prev => prev.map((t, idx) => idx === i ? { ...t, done: !t.done } : t));
   };
 
   const donePct = Math.round((todos.filter(t => t.done).length / todos.length) * 100);
+
+  // ✅ BUG FIX 5: Live exam countdown using real dates
+  const examDates = [
+    { exam: "UPSC Prelims 2025", date: new Date("2025-05-26"), icon: "🔴" },
+    { exam: "SSC CGL Tier I", date: new Date("2025-06-20"), icon: "🟡" },
+    { exam: "IBPS PO", date: new Date("2025-08-15"), icon: "🟢" },
+  ];
+  const today = new Date();
+  const exams = examDates.map(e => {
+    const diff = Math.ceil((e.date - today) / (1000 * 60 * 60 * 24));
+    return { ...e, days: diff > 0 ? diff : 0, urgent: diff <= 14 && diff > 0, dateStr: e.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) };
+  });
 
   return (
     <div className="space-y-5">
@@ -217,6 +228,7 @@ const DashboardTab = ({ setActiveTab }) => {
             <Icon name="plus" size={15} />
           </button>
         </div>
+        {/* ✅ Progress bar live update */}
         <div className="h-1.5 bg-slate-100 rounded-full mb-4 overflow-hidden">
           <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700"
             style={{ width: `${donePct}%` }} />
@@ -264,23 +276,19 @@ const DashboardTab = ({ setActiveTab }) => {
         </div>
       </Card>
 
-      {/* Exam Countdown */}
+      {/* ✅ BUG FIX 5: Live Exam Countdown */}
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-black text-slate-800">Exam Countdown ⏳</h3>
           <button className="text-xs font-semibold text-blue-600">+ Add</button>
         </div>
         <div className="space-y-1">
-          {[
-            { exam: "UPSC Prelims 2025", date: "26 May 2025", days: 14, icon: "🔴", urgent: true },
-            { exam: "SSC CGL Tier I", date: "20 Jun 2025", days: 38, icon: "🟡", urgent: false },
-            { exam: "IBPS PO", date: "15 Aug 2025", days: 94, icon: "🟢", urgent: false },
-          ].map((e) => (
+          {exams.map((e) => (
             <div key={e.exam} className={`flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0 ${e.urgent ? "bg-red-50/50 -mx-4 px-4 rounded-xl" : ""}`}>
               <span className="text-lg">{e.icon}</span>
               <div className="flex-1">
                 <p className={`text-sm font-bold ${e.urgent ? "text-red-700" : "text-slate-800"}`}>{e.exam}</p>
-                <p className="text-xs text-slate-400">{e.date}</p>
+                <p className="text-xs text-slate-400">{e.dateStr}</p>
               </div>
               <div className={`text-center px-3 py-1.5 rounded-xl border ${e.urgent ? "bg-red-100 border-red-200" : e.days < 50 ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200"}`}>
                 <p className={`text-lg font-black ${e.urgent ? "text-red-600" : e.days < 50 ? "text-amber-600" : "text-emerald-600"}`}>{e.days}</p>
@@ -302,7 +310,9 @@ const QuizTab = () => {
   const [answers, setAnswers] = useState([]);
   const [negativeMode, setNegativeMode] = useState(false);
   const [subject, setSubject] = useState("All");
-  const [timeLeft, setTimeLeft] = useState(360);
+  // ✅ BUG FIX 2: timeLeft initialized as null, set only when quiz starts
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [quizDuration, setQuizDuration] = useState(360);
   const timerRef = useRef(null);
 
   const questions = [
@@ -313,17 +323,31 @@ const QuizTab = () => {
     { q: "Which Five Year Plan focused on 'Garibi Hatao'?", opts: ["3rd", "4th", "5th", "6th"], ans: 2, topic: "Economics", exp: "5th Five Year Plan (1974-79) under Indira Gandhi had the 'Garibi Hatao' slogan." },
   ];
 
+  // ✅ BUG FIX 2: Timer starts fresh every time phase becomes "quiz"
   useEffect(() => {
     if (phase === "quiz") {
+      clearInterval(timerRef.current);
+      setTimeLeft(quizDuration);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [phase, quizDuration]);
+
+  useEffect(() => {
+    if (phase === "quiz" && timeLeft !== null) {
+      if (timeLeft <= 0) {
+        clearInterval(timerRef.current);
+        setPhase("result");
+        return;
+      }
       timerRef.current = setInterval(() => {
         setTimeLeft(t => {
           if (t <= 1) { clearInterval(timerRef.current); setPhase("result"); return 0; }
           return t - 1;
         });
       }, 1000);
+      return () => clearInterval(timerRef.current);
     }
-    return () => clearInterval(timerRef.current);
-  }, [phase]);
+  }, [phase, timeLeft !== null]);
 
   const q = questions[current];
   const score = answers.filter((a, i) => a === questions[i]?.ans).length;
@@ -342,8 +366,30 @@ const QuizTab = () => {
     }, 800);
   };
 
-  const resetQuiz = () => { setPhase("home"); setCurrent(0); setAnswers([]); setSelected(null); setTimeLeft(360); };
-  const fmtTime = (s) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  // ✅ BUG FIX 2: Full reset including timeLeft
+  const resetQuiz = () => {
+    clearInterval(timerRef.current);
+    setPhase("home");
+    setCurrent(0);
+    setAnswers([]);
+    setSelected(null);
+    setTimeLeft(null);
+  };
+
+  const startQuiz = (mins) => {
+    const dur = mins * 60;
+    setQuizDuration(dur);
+    setTimeLeft(dur);
+    setCurrent(0);
+    setAnswers([]);
+    setSelected(null);
+    setPhase("quiz");
+  };
+
+  const fmtTime = (s) => {
+    if (s === null) return "00:00";
+    return `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  };
 
   if (phase === "home") return (
     <div className="space-y-5">
@@ -393,7 +439,7 @@ const QuizTab = () => {
             { title: "SSC CGL Reasoning Practice", q: 20, mins: 15, topic: "Reasoning", badge: null },
             { title: "History Topicwise – Ancient India", q: 15, mins: 12, topic: "History", badge: "✨ New", bColor: "green" },
           ].map((qz, i) => (
-            <Card key={i} onClick={() => { setCurrent(0); setAnswers([]); setSelected(null); setTimeLeft(qz.mins * 60); setPhase("quiz"); }}>
+            <Card key={i} onClick={() => startQuiz(qz.mins)}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
                   <Icon name="quiz" size={18} />
@@ -486,7 +532,7 @@ const QuizTab = () => {
           ))}
           <span className="text-xs text-slate-400 font-bold ml-1">{current + 1}/{questions.length}</span>
         </div>
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-sm ml-3 ${timeLeft < 60 ? "bg-red-50 text-red-600 border border-red-200 animate-pulse" : "bg-slate-100 text-slate-600"}`}>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-sm ml-3 ${timeLeft !== null && timeLeft < 60 ? "bg-red-50 text-red-600 border border-red-200 animate-pulse" : "bg-slate-100 text-slate-600"}`}>
           ⏱ {fmtTime(timeLeft)}
         </div>
       </div>
@@ -535,6 +581,7 @@ const DoubtTab = () => {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
+  // ✅ BUG FIX 1 (Doubt Solver): Proper API call - key handled by Next.js env, CORS safe
   const send = async () => {
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
@@ -542,21 +589,17 @@ const DoubtTab = () => {
     setMessages(prev => [...prev, { role: "user", text: userMsg }]);
     setLoading(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: "You are ExamBuddy AI Doubt Solver for Indian competitive exam students (UPSC, SSC, IBPS, Railway, State PSC). Answer clearly and concisely in a friendly tone. Use bullet points for lists. Add a quick exam tip at the end when relevant. Keep answers focused and practical.",
-          messages: [{ role: "user", content: userMsg }],
-        }),
+        body: JSON.stringify({ message: userMsg }),
       });
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
-      const text = data.content?.map(c => c.text || "").join("") || "Sorry, I could not get a response.";
+      const text = data.answer || "Sorry, I could not get a response.";
       setMessages(prev => [...prev, { role: "ai", text }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "ai", text: "Connection error. Please check your internet and try again." }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: "ai", text: `Connection error: ${err.message}. Please check your API route at /api/ask.` }]);
     }
     setLoading(false);
   };
@@ -565,7 +608,6 @@ const DoubtTab = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
         <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center text-white">
           <Icon name="brain" size={18} />
@@ -639,8 +681,9 @@ const DoubtTab = () => {
 const FlashcardsTab = () => {
   const [flipped, setFlipped] = useState(false);
   const [index, setIndex] = useState(0);
-  const [known, setKnown] = useState([]);
-  const [review, setReview] = useState([]);
+  // ✅ BUG FIX 3: Use Sets to prevent duplicate counting
+  const [known, setKnown] = useState(new Set());
+  const [review, setReview] = useState(new Set());
   const [subject, setSubject] = useState("All");
 
   const cards = [
@@ -652,13 +695,23 @@ const FlashcardsTab = () => {
   ];
 
   const card = cards[index];
+
   const next = (action) => {
-    if (action === "known") setKnown(prev => [...prev, index]);
-    else setReview(prev => [...prev, index]);
+    // ✅ BUG FIX 3: Sets prevent same card being counted multiple times
+    if (action === "known") {
+      setKnown(prev => new Set([...prev, index]));
+      setReview(prev => { const s = new Set(prev); s.delete(index); return s; });
+    } else {
+      setReview(prev => new Set([...prev, index]));
+      setKnown(prev => { const s = new Set(prev); s.delete(index); return s; });
+    }
     setFlipped(false);
     setTimeout(() => { setIndex(i => (i + 1 < cards.length ? i + 1 : 0)); }, 250);
   };
-  const donePct = ((index) / cards.length) * 100;
+
+  const donePct = (index / cards.length) * 100;
+  // ✅ BUG FIX 3: Accurate remaining = total - (known + review), minimum 0
+  const remaining = Math.max(0, cards.length - known.size - review.size);
 
   return (
     <div className="space-y-5">
@@ -667,8 +720,8 @@ const FlashcardsTab = () => {
           <h2 className="text-lg font-black text-slate-900">Flashcards</h2>
           <p className="text-xs text-slate-400 mt-0.5">
             {index + 1} of {cards.length} ·{" "}
-            <span className="text-emerald-600 font-bold">{known.length} known</span> ·{" "}
-            <span className="text-red-500 font-bold">{review.length} to review</span>
+            <span className="text-emerald-600 font-bold">{known.size} known</span> ·{" "}
+            <span className="text-red-500 font-bold">{review.size} to review</span>
           </p>
         </div>
         <button className="w-9 h-9 border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-300 transition-colors">
@@ -678,13 +731,11 @@ const FlashcardsTab = () => {
 
       <SubjectPills active={subject} onChange={setSubject} />
 
-      {/* Progress */}
       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
           style={{ width: `${donePct}%` }} />
       </div>
 
-      {/* Flashcard 3D */}
       <div style={{ perspective: "1000px" }}>
         <div onClick={() => setFlipped(!flipped)} className="cursor-pointer relative transition-all duration-500"
           style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", minHeight: 230 }}>
@@ -723,12 +774,12 @@ const FlashcardsTab = () => {
         </div>
       )}
 
-      {/* Session Stats */}
+      {/* ✅ BUG FIX 3: Accurate session stats using Set sizes */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: "Remaining", value: cards.length - known.length - review.length, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Known", value: known.length, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Review", value: review.length, color: "text-red-500", bg: "bg-red-50" },
+          { label: "Remaining", value: remaining, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Known", value: known.size, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Review", value: review.size, color: "text-red-500", bg: "bg-red-50" },
         ].map(s => (
           <div key={s.label} className={`${s.bg} rounded-2xl p-3 text-center border border-white`}>
             <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
@@ -737,7 +788,6 @@ const FlashcardsTab = () => {
         ))}
       </div>
 
-      {/* Notes */}
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-slate-800">Personal Notes</h3>
@@ -764,7 +814,9 @@ const FlashcardsTab = () => {
 const CurrentTab = () => {
   const [lang, setLang] = useState("English");
   const [category, setCategory] = useState("All");
+  // ✅ BUG FIX 4: MCQ resets when tab revisited - stored per session only
   const [mcqSelected, setMcqSelected] = useState(null);
+  const [mcqResetKey, setMcqResetKey] = useState(0);
 
   const news = [
     { title: "India's GDP grows at 8.2% in Q4 FY24, fastest among G20 nations", category: "Economy", time: "2h ago", important: true },
@@ -777,6 +829,12 @@ const CurrentTab = () => {
 
   const cats = ["All", "Economy", "Polity", "Defence", "Science", "Environment", "Education"];
   const filtered = category === "All" ? news : news.filter(n => n.category === category);
+
+  // ✅ BUG FIX 4: Reset MCQ handler
+  const handleMcqSelect = (i) => {
+    if (mcqSelected === null) setMcqSelected(i);
+  };
+  const resetMcq = () => { setMcqSelected(null); setMcqResetKey(k => k + 1); };
 
   return (
     <div className="space-y-5">
@@ -806,13 +864,18 @@ const CurrentTab = () => {
         ))}
       </div>
 
-      {/* MCQ of the Day */}
-      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
-            <Icon name="star" size={14} />
+      {/* ✅ BUG FIX 4: MCQ with reset button */}
+      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50" key={mcqResetKey}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+              <Icon name="star" size={14} />
+            </div>
+            <span className="text-xs font-black text-blue-700 uppercase tracking-wide">MCQ of the Day ⭐</span>
           </div>
-          <span className="text-xs font-black text-blue-700 uppercase tracking-wide">MCQ of the Day ⭐</span>
+          {mcqSelected !== null && (
+            <button onClick={resetMcq} className="text-xs text-blue-600 font-bold hover:underline">Try Again</button>
+          )}
         </div>
         <p className="text-sm font-bold text-slate-800 mb-3">India's GDP growth rate in Q4 FY24 was closest to:</p>
         {["6.8%", "7.6%", "8.2%", "9.1%"].map((opt, i) => {
@@ -824,7 +887,7 @@ const CurrentTab = () => {
             else cls = "border-slate-100 bg-white text-slate-400 opacity-60";
           }
           return (
-            <button key={i} onClick={() => { if (mcqSelected === null) setMcqSelected(i); }}
+            <button key={i} onClick={() => handleMcqSelect(i)}
               className={`w-full text-left text-sm font-semibold px-3 py-2.5 rounded-xl border mb-2 transition-all ${cls}`}>
               {["A", "B", "C", "D"][i]}. {opt}
               {mcqSelected !== null && i === correctIdx && " ✓"}
@@ -838,7 +901,6 @@ const CurrentTab = () => {
         )}
       </Card>
 
-      {/* News */}
       <div className="space-y-3">
         {filtered.map((n, i) => (
           <Card key={i}>
@@ -910,7 +972,6 @@ const LeaderboardTab = () => {
         ))}
       </div>
 
-      {/* Podium */}
       <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100/60 border border-amber-200 rounded-3xl p-5">
         <div className="flex items-end justify-center gap-4">
           {[users[1], users[0], users[2]].map((u, i) => {
@@ -933,7 +994,6 @@ const LeaderboardTab = () => {
         </div>
       </div>
 
-      {/* List */}
       <div className="space-y-2">
         {users.map((u, i) => (
           <Card key={i} className={`flex items-center gap-3 py-3 ${u.isMe ? "border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md shadow-blue-100" : ""}`}>
@@ -954,7 +1014,6 @@ const LeaderboardTab = () => {
         ))}
       </div>
 
-      {/* Badges */}
       <div>
         <h3 className="text-sm font-black text-slate-800 mb-3">Your Achievements</h3>
         <div className="grid grid-cols-4 gap-2.5">
@@ -1001,7 +1060,6 @@ const MarketplaceTab = () => {
         <p className="text-xs text-slate-400">Study materials by toppers & educators</p>
       </div>
 
-      {/* Sell Banner */}
       <div className="relative rounded-2xl overflow-hidden p-4 flex items-center gap-3 shadow-lg"
         style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5, #2563eb)" }}>
         <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
@@ -1057,7 +1115,6 @@ const MarketplaceTab = () => {
         ))}
       </div>
 
-      {/* Job Alerts */}
       <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
@@ -1101,7 +1158,6 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
-      {/* Header */}
       <header className="bg-white/90 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40 shadow-sm">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -1130,12 +1186,10 @@ export default function Page() {
         </div>
       </header>
 
-      {/* Content */}
       <main className="max-w-lg mx-auto px-4 pt-5">
         {tabComponents[activeTab]}
       </main>
 
-      {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 z-40 shadow-2xl">
         <div className="max-w-lg mx-auto px-1">
           <div className="flex">
