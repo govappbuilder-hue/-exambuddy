@@ -1,8 +1,7 @@
-import { GoogleGenAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Security check: API key properly verify thay chhe ke nahi
 const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
-const genAI = new GoogleGenAI({ apiKey });
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export async function POST(request) {
   try {
@@ -15,10 +14,8 @@ export async function POST(request) {
       return Response.json({ error: "Gemini API key is missing on the server" }, { status: 500 });
     }
 
-    // Sprint task: Updated to gemini-2.0-flash-lite
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
-    // Build conversation context from history
     const contextLines = history
       ? history
           .slice(-4)
@@ -40,8 +37,7 @@ Rules:
     const prompt = `${systemContext}\n\nPrevious conversation:\n${contextLines}\n\nStudent's current question: ${question}`;
 
     const result = await model.generateContent(prompt);
-    // Correct way to get text in standard SDK
-    const answer = result.response.text(); 
+    const answer = result.response.text();
 
     return Response.json({ answer });
   } catch (error) {
