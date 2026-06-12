@@ -363,6 +363,44 @@ const DashboardTab = ({ setActiveTab }) => {
 };
 
 // ─── QUIZ ─────────────────────────────────────────────────────────────────────
+const BookmarkButton = ({ question, answer, topic }) => {
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleBookmark = async () => {
+    if (saved || loading) return;
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { alert("Login karo pehla!"); return; }
+      await supabase.from('bookmarks').insert({
+        user_id: user.id,
+        question,
+        correct_answer: answer,
+        topic: topic || 'General',
+        created_at: new Date().toISOString(),
+      });
+      setSaved(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button onClick={handleBookmark}
+      className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg transition-all ${saved
+        ? "text-amber-400 bg-amber-900/30 border border-amber-700/50"
+        : "text-gray-500 bg-gray-900 border border-gray-700 hover:text-amber-400 hover:border-amber-700/50"}`}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+      </svg>
+      {loading ? "..." : saved ? "Saved!" : "Save"}
+    </button>
+  );
+};
+
 const QuizTab = () => {
   const [phase, setPhase] = useState("home");
   const [current, setCurrent] = useState(0);
@@ -705,12 +743,14 @@ const QuizTab = () => {
                         ✗ Your answer: {qq.opts[userAns]}
                       </p>
                     )}
-                    {/* ✅ FIX 3: Explanation ALWAYS shows — never empty */}
+                    {/* Explanation */}
                     <p className="text-xs text-gray-400 bg-gray-950 rounded-lg px-2 py-1.5 leading-relaxed">
                       💡 {qq.exp && qq.exp.trim().length > 0
                         ? qq.exp
                         : "આ પ્રશ્નનો સાચો જવાબ ઉપર દર્શાવેલ option છે."}
                     </p>
+                    {/* Bookmark button */}
+                    <BookmarkButton question={qq.q} answer={qq.opts[qq.ans]} topic={qq.topic} />
                   </div>
                 </Card>
               );
@@ -1134,12 +1174,57 @@ const CurrentTab = () => {
 // ─── LEADERBOARD ──────────────────────────────────────────────────────────────
 const LeaderboardTab = () => {
   const [period, setPeriod] = useState("weekly");
+  const [userStats, setUserStats] = useState({ quizzes: 0, streak: 0, score: 0 });
+  const [bookmarks, setBookmarks] = useState([]);
+  const [activeView, setActiveView] = useState("leaderboard");
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: history } = await supabase
+        .from('quiz_history').select('score, total, created_at')
+        .eq('user_id', user.id).order('created_at', { ascending: false });
+      if (history && history.length > 0) {
+        const totalScore = history.reduce((a, b) => a + b.score, 0);
+        let streak = 0;
+        const today = new Date();
+        const uniqueDates = [...new Set(history.map(h => new Date(h.created_at).toDateString()))];
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(today); d.setDate(today.getDate() - i);
+          if (uniqueDates.includes(d.toDateString())) streak++;
+          else if (i > 0) break;
+        }
+        setUserStats({ quizzes: history.length, streak, score: totalScore * 10 });
+      }
+      const { data: bm } = await supabase.from('bookmarks').select('*')
+        .eq('user_id', user.id).order('created_at', { ascending: false });
+      if (bm) setBookmarks(bm);
+    };
+    init();
+  }, []);
+
+  const removeBookmark = async (id) => {
+    await supabase.from('bookmarks').delete().eq('id', id);
+    setBookmarks(prev => prev.filter(b => b.id !== id));
+  };
+
+  const allBadges = [
+    { icon: "🎯", label: "First Quiz", earned: (s) => s.quizzes >= 1, req: "1 quiz karo" },
+    { icon: "🔥", label: "3-Day Streak", earned: (s) => s.streak >= 3, req: "3 din streak" },
+    { icon: "🧠", label: "Quiz Master", earned: (s) => s.quizzes >= 10, req: "10 quizzes" },
+    { icon: "⚡", label: "Speed Runner", earned: (s) => s.quizzes >= 5, req: "5 quizzes" },
+    { icon: "🔥", label: "7-Day Streak", earned: (s) => s.streak >= 7, req: "7 din streak" },
+    { icon: "📰", label: "News Ninja", earned: (s) => s.quizzes >= 3, req: "3 quizzes" },
+    { icon: "🏆", label: "Top Scorer", earned: (s) => s.score >= 500, req: "High score" },
+    { icon: "💎", label: "Diamond", earned: (s) => s.streak >= 30, req: "30 din streak" },
+  ];
 
   const users = [
     { name: "Arjun Sharma", score: 2840, streak: 21, avatar: "AS", rank: 1 },
     { name: "Priya Patel", score: 2650, streak: 15, avatar: "PP", rank: 2 },
     { name: "Rohit Kumar", score: 2410, streak: 12, avatar: "RK", rank: 3 },
-    { name: "You", score: 1980, streak: 7, avatar: "ME", rank: 24, isMe: true },
+    { name: "You", score: userStats.score || 1980, streak: userStats.streak || 7, avatar: "ME", rank: 24, isMe: true },
     { name: "Sneha Joshi", score: 1840, streak: 9, avatar: "SJ", rank: 25 },
   ];
 
@@ -1210,23 +1295,59 @@ const LeaderboardTab = () => {
         ))}
       </div>
 
+      {/* Badges Section */}
       <div>
-        <h3 className="text-sm font-black text-gray-100 mb-3">Your Achievements</h3>
-        <div className="grid grid-cols-4 gap-2.5">
-          {[
-            { icon: "🔥", label: "7-Day Streak", earned: true },
-            { icon: "🧠", label: "Quiz Master", earned: true },
-            { icon: "📰", label: "News Ninja", earned: false },
-            { icon: "🏆", label: "Top 10", earned: false },
-          ].map((b, i) => (
-            <div key={i} className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border text-center ${b.earned
-              ? "border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-gray-900/50 shadow-sm"
-              : "border-gray-800 bg-gray-950 opacity-40"}`}>
-              <span className="text-2xl">{b.icon}</span>
-              <p className="text-[10px] text-gray-300 font-bold leading-tight">{b.label}</p>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-black text-gray-100">🏅 Achievements</h3>
+          <span className="text-xs text-gray-500">{allBadges.filter(b => b.earned(userStats)).length}/{allBadges.length} earned</span>
         </div>
+        <div className="grid grid-cols-4 gap-2.5">
+          {allBadges.map((b, i) => {
+            const isEarned = b.earned(userStats);
+            return (
+              <div key={i} className={`flex flex-col items-center gap-1 p-2.5 rounded-2xl border text-center relative ${isEarned
+                ? "border-amber-500/50 bg-gradient-to-br from-amber-900/40 to-orange-900/30 shadow-amber-900/20 shadow-sm"
+                : "border-gray-800 bg-gray-900/50 opacity-50"}`}>
+                <span className="text-2xl">{b.icon}</span>
+                <p className="text-[9px] text-gray-300 font-bold leading-tight">{b.label}</p>
+                {!isEarned && <p className="text-[8px] text-gray-600 mt-0.5">{b.req}</p>}
+                {isEarned && <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bookmarks Section */}
+      <div>
+        <h3 className="text-sm font-black text-gray-100 mb-3">🔖 Saved Questions ({bookmarks.length})</h3>
+        {bookmarks.length === 0 ? (
+          <div className="text-center py-8 text-gray-600">
+            <p className="text-3xl mb-2">🔖</p>
+            <p className="text-sm font-bold text-gray-500">No saved questions yet</p>
+            <p className="text-xs text-gray-600 mt-1">Quiz ma bookmark button tap karo</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {bookmarks.map((bm) => (
+              <div key={bm.id} className="bg-gray-900 border border-gray-700 rounded-2xl p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-100 leading-snug flex-1">{bm.question}</p>
+                  <button onClick={() => removeBookmark(bm.id)}
+                    className="text-gray-600 hover:text-red-400 flex-shrink-0 mt-0.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-xs text-emerald-400 font-bold mt-2">✓ {bm.correct_answer}</p>
+                {bm.topic && <span className="inline-block text-[10px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full mt-1">{bm.topic}</span>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
