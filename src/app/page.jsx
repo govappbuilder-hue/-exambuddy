@@ -1232,107 +1232,238 @@ const LeaderboardTab = () => {
   );
 };
 
-// ─── MARKETPLACE ──────────────────────────────────────────────────────────────
+// ─── MARKETPLACE / PREMIUM ────────────────────────────────────────────────────
 const MarketplaceTab = () => {
-  const [filterType, setFilterType] = useState("All");
+  const [loading, setLoading] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("monthly");
+  const [user, setUser] = useState(null);
+  const [successMsg, setSuccessMsg] = useState("");
 
-  const items = [
-    { title: "UPSC Prelims Complete Notes 2024", author: "IAS Mentor", type: "PDF", price: 99, rating: 4.8, downloads: 1240, pages: 340, badge: "Bestseller" },
-    { title: "SSC CGL Maths Shortcut Tricks", author: "Rajesh Sir", type: "PDF", price: 49, rating: 4.6, downloads: 890, pages: 120, badge: null },
-    { title: "Polity by Laxmikanth – Revision Notes", author: "CivilsPrep", type: "PDF", price: 0, rating: 4.9, downloads: 5200, pages: 80, badge: "Free" },
-    { title: "Current Affairs Jan-Jun 2024", author: "NewsEdge", type: "PDF", price: 79, rating: 4.5, downloads: 670, pages: 200, badge: "New" },
-    { title: "Ancient History Full Course Pack", author: "HistoryHero", type: "Course", price: 299, rating: 4.7, downloads: 430, pages: null, badge: "Premium" },
-    { title: "Reasoning 500 Practice Questions", author: "LogicBox", type: "PDF", price: 39, rating: 4.4, downloads: 1100, pages: 90, badge: null },
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+        // Check premium status
+        const { data } = await supabase
+          .from('user_premium')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .gt('expires_at', new Date().toISOString())
+          .single();
+        if (data) setIsPremium(true);
+      }
+    };
+    init();
+  }, []);
+
+  const handlePayment = async () => {
+    if (!user) { alert("Pehla login karo!"); return; }
+    setLoading(true);
+    try {
+      // 1. Order create kariye
+      const res = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: selectedPlan }),
+      });
+      const { orderId, amount, currency } = await res.json();
+
+      // 2. Razorpay checkout open kariye
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount,
+        currency,
+        name: "ExamBuddy Premium",
+        description: selectedPlan === "yearly" ? "1 Year Premium Access" : "1 Month Premium Access",
+        order_id: orderId,
+        prefill: { email: user.email },
+        theme: { color: "#2563eb" },
+        handler: async (response) => {
+          // 3. Payment verify kariye
+          const verifyRes = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              userId: user.id,
+              plan: selectedPlan,
+            }),
+          });
+          const result = await verifyRes.json();
+          if (result.success) {
+            setIsPremium(true);
+            setSuccessMsg("🎉 Premium activated! Badhi features unlock thayi!");
+          }
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      alert("Payment error: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const premiumFeatures = [
+    { icon: "📝", title: "Unlimited Mock Tests", sub: "GPSC, GSSSB, Police, PSI" },
+    { icon: "🤖", title: "AI Doubt Solver", sub: "Unlimited questions" },
+    { icon: "⚡", title: "Flashcards - All Subjects", sub: "16+ subjects" },
+    { icon: "📰", title: "Daily Current Affairs", sub: "Gujarati + Hindi" },
+    { icon: "📊", title: "Detailed Analytics", sub: "Subject-wise weak areas" },
+    { icon: "🏆", title: "Leaderboard Access", sub: "Gujarat rank dekho" },
+    { icon: "📄", title: "PDF Download", sub: "Current affairs monthly" },
+    { icon: "🔔", title: "Exam Notifications", sub: "GPSC, GSSSB alerts" },
   ];
 
-  const types = ["All", "PDF", "Course", "Test Series"];
-  const filtered = filterType === "All" ? items : items.filter(i => i.type === filterType);
-  const badgeColors = { Bestseller: "amber", Free: "green", New: "blue", Premium: "purple" };
+  if (isPremium) {
+    return (
+      <div className="space-y-5">
+        <div className="relative rounded-2xl overflow-hidden p-5 shadow-lg text-center"
+          style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}>
+          <div className="text-4xl mb-2">👑</div>
+          <h2 className="text-lg font-black text-white">Premium Member!</h2>
+          <p className="text-xs text-white/80 mt-1">Tamari badhi features unlock che</p>
+        </div>
+        {successMsg && (
+          <div className="bg-emerald-900/40 border border-emerald-700 rounded-2xl p-4 text-center">
+            <p className="text-emerald-400 font-bold text-sm">{successMsg}</p>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          {premiumFeatures.map((f, i) => (
+            <Card key={i}>
+              <div className="text-2xl mb-1">{f.icon}</div>
+              <p className="text-xs font-bold text-gray-100">{f.title}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{f.sub}</p>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div>
-        <h2 className="text-lg font-black text-gray-50">Marketplace 🛒</h2>
-        <p className="text-xs text-gray-500">Study materials by toppers & educators</p>
+        <h2 className="text-lg font-black text-gray-50">Premium Plans 👑</h2>
+        <p className="text-xs text-gray-500">Gujarat exam ma top rank laavo</p>
       </div>
 
-      <div className="relative rounded-2xl overflow-hidden p-4 flex items-center gap-3 shadow-lg"
-        style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5, #2563eb)" }}>
-        <div className="absolute -right-6 -top-6 w-24 h-24 bg-gray-900/10 rounded-full blur-2xl" />
-        <div className="flex-1 relative">
-          <p className="font-black text-white text-sm">💰 Sell Your Study Material</p>
-          <p className="text-xs text-white/80 mt-0.5">Upload PDFs & earn 70% commission</p>
+      {/* Hero Banner */}
+      <div className="relative rounded-2xl overflow-hidden p-5 shadow-xl"
+        style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb, #7c3aed)" }}>
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/5 rounded-full" />
+        <div className="absolute -left-4 -bottom-4 w-20 h-20 bg-white/5 rounded-full" />
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-2xl">🚀</span>
+            <span className="text-xs font-black text-blue-200 uppercase tracking-widest">ExamBuddy</span>
+          </div>
+          <h3 className="text-xl font-black text-white leading-tight">GPSC Crack karo<br />Premium sathe!</h3>
+          <p className="text-xs text-blue-200 mt-2">3,220+ questions · AI-powered · Gujarati medium</p>
         </div>
-        <button className="flex-shrink-0 px-4 py-2 bg-gray-900 text-violet-700 rounded-xl text-xs font-black hover:bg-gray-950 active:scale-95 transition-all shadow-gray-900/50 shadow-sm">
-          Upload
+      </div>
+
+      {/* Plan Toggle */}
+      <div className="bg-gray-900 rounded-2xl p-1 flex gap-1">
+        <button
+          onClick={() => setSelectedPlan("monthly")}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${selectedPlan === "monthly"
+            ? "bg-blue-600 text-white shadow-sm"
+            : "text-gray-400"}`}>
+          Monthly
+        </button>
+        <button
+          onClick={() => setSelectedPlan("yearly")}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all relative ${selectedPlan === "yearly"
+            ? "bg-blue-600 text-white shadow-sm"
+            : "text-gray-400"}`}>
+          Yearly
+          <span className="absolute -top-2 -right-1 bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">SAVE 33%</span>
         </button>
       </div>
 
-      <div className="flex gap-2">
-        {types.map(t => (
-          <button key={t} onClick={() => setFilterType(t)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${filterType === t
-              ? "bg-blue-600 text-white border-blue-600 shadow-gray-900/50 shadow-sm"
-              : "bg-gray-900 text-gray-300 border-gray-700 hover:border-blue-300"}`}>
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        {filtered.map((item, i) => (
-          <Card key={i}>
-            <div className="flex items-start gap-3">
-              <div className="w-12 h-14 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0 text-blue-500">
-                <Icon name={item.type === "Course" ? "eye" : "list"} size={20} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                  {item.badge && <Badge color={badgeColors[item.badge] || "gray"}>{item.badge}</Badge>}
-                  <Badge color="gray">{item.type}</Badge>
-                </div>
-                <p className="text-sm font-bold text-gray-50 leading-snug">{item.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">by {item.author} · ⭐ {item.rating} · {item.downloads.toLocaleString()} downloads</p>
-                {item.pages && <p className="text-xs text-gray-500">{item.pages} pages</p>}
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
-              <span className="text-base font-black text-gray-50">
-                {item.price === 0 ? <span className="text-emerald-600">Free ✓</span> : `₹${item.price}`}
-              </span>
-              <button className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-gray-900/50 shadow-sm ${item.price === 0
-                ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/25 hover:shadow-md"
-                : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-blue-600/25 hover:shadow-md"}`}>
-                <Icon name={item.price === 0 ? "download" : "lock"} size={13} />
-                {item.price === 0 ? "Download" : "Buy Now"}
-              </button>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
-            <Icon name="bell" size={14} />
+      {/* Price Card */}
+      <Card>
+        <div className="text-center py-2">
+          <div className="flex items-end justify-center gap-1 mb-1">
+            <span className="text-4xl font-black text-gray-50">
+              ₹{selectedPlan === "yearly" ? "799" : "99"}
+            </span>
+            <span className="text-gray-500 text-sm mb-2">
+              /{selectedPlan === "yearly" ? "year" : "month"}
+            </span>
           </div>
-          <span className="text-xs font-black text-emerald-700 uppercase tracking-wide">Latest Job Notifications</span>
+          {selectedPlan === "yearly" && (
+            <p className="text-xs text-emerald-400 font-bold">= ₹66/month · ₹400 bachao!</p>
+          )}
+          {selectedPlan === "monthly" && (
+            <p className="text-xs text-gray-500">Daily ₹3.30 ma complete preparation</p>
+          )}
         </div>
-        <div className="space-y-1">
-          {[
-            { title: "UPSC CSE 2025 — Mains Result Out", date: "Out Now", hot: true },
-            { title: "GSSSB Junior Clerk 2026 Notification", date: "New", hot: true },
-            { title: "IBPS PO 2026 Apply Online", date: "Aug 9", hot: false },
-          ].map((j, i) => (
-            <div key={i} className={`flex items-center justify-between py-2 border-b border-emerald-100 last:border-0 ${j.hot ? "bg-red-50/50 -mx-4 px-4 rounded-xl" : ""}`}>
-              <p className={`text-xs font-bold ${j.hot ? "text-red-700" : "text-gray-200"}`}>{j.title}</p>
-              <Badge color={j.hot ? "red" : "gray"}>{j.date}</Badge>
+
+        <div className="mt-4 space-y-2.5">
+          {premiumFeatures.map((f, i) => (
+            <div key={i} className="flex items-center gap-2.5">
+              <div className="w-5 h-5 bg-emerald-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-200">{f.title}</span>
+                <span className="text-xs text-gray-500"> · {f.sub}</span>
+              </div>
             </div>
           ))}
         </div>
-        <button className="mt-3 text-xs text-blue-600 font-bold flex items-center gap-1 hover:underline">
-          <Icon name="download" size={12} /> Download Syllabus PDFs
+
+        <button
+          onClick={handlePayment}
+          disabled={loading}
+          className="mt-5 w-full py-3.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 shadow-lg disabled:opacity-60"
+          style={{ background: "linear-gradient(135deg, #2563eb, #7c3aed)" }}>
+          {loading ? "Processing..." : `🔓 Get Premium - ₹${selectedPlan === "yearly" ? "799" : "99"}`}
         </button>
+        <p className="text-center text-xs text-gray-600 mt-2">Secure payment via Razorpay · UPI/Card/NetBanking</p>
+      </Card>
+
+      {/* Free vs Premium comparison */}
+      <Card>
+        <p className="text-xs font-black text-gray-400 uppercase tracking-wide mb-3">Free vs Premium</p>
+        <div className="space-y-2">
+          {[
+            { feature: "Quiz (10 questions)", free: true, premium: true },
+            { feature: "Mock Tests", free: "2/month", premium: "Unlimited" },
+            { feature: "AI Doubt Solver", free: "3/day", premium: "Unlimited" },
+            { feature: "Current Affairs", free: "Headlines only", premium: "Full + PDF" },
+            { feature: "Flashcards", free: "History only", premium: "All 16 subjects" },
+            { feature: "Analytics", free: "Basic", premium: "Detailed" },
+          ].map((row, i) => (
+            <div key={i} className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-800 last:border-0">
+              <span className="text-xs text-gray-400 col-span-1">{row.feature}</span>
+              <span className="text-xs text-center text-gray-500">
+                {row.free === true ? "✓" : row.free === false ? "✗" : row.free}
+              </span>
+              <span className={`text-xs text-center font-bold ${row.premium === "Unlimited" || row.premium === true ? "text-emerald-400" : "text-blue-400"}`}>
+                {row.premium === true ? "✓" : row.premium}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-2 pt-2">
+          <div />
+          <p className="text-xs text-center text-gray-600 font-bold">Free</p>
+          <p className="text-xs text-center text-blue-500 font-black">Premium</p>
+        </div>
       </Card>
     </div>
   );
