@@ -596,12 +596,12 @@ const DoubtTab = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: userMsg, history }),
       });
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `API error: ${res.status}`);
       const text = data.answer || "Sorry, I could not get a response.";
       setMessages(prev => [...prev, { role: "ai", text }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: "ai", text: `Connection error: ${err.message}. Please try again.` }]);
+      setMessages(prev => [...prev, { role: "ai", text: `❌ ${err.message}` }]);
     }
     setLoading(false);
   };
