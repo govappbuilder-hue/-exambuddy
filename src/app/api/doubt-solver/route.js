@@ -2,44 +2,40 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(request) {
   try {
-    // Try all possible env variable names
-    const apiKey =
-      process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      "";
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
     const { question, history } = await request.json();
 
     if (!question) {
       return Response.json({ error: "No question provided" }, { status: 400 });
     }
-
-    // Return exact error so we can debug
     if (!apiKey) {
-      return Response.json({
-        error: "API key missing. Available env vars: " +
-          Object.keys(process.env)
-            .filter(k => k.includes("GEMINI") || k.includes("GOOGLE") || k.includes("API"))
-            .join(", ")
-      }, { status: 500 });
+      return Response.json({ error: "Gemini API key is missing" }, { status: 500 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // ✅ Use same model as other working routes in project
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const contextLines = history
-      ? history.slice(-4).map((m) =>
-          `${m.role === "user" ? "Student" : "Teacher"}: ${m.text}`
-        ).join("\n")
+      ? history
+          .slice(-4)
+          .map((m) => `${m.role === "user" ? "Student" : "Teacher"}: ${m.text}`)
+          .join("\n")
       : "";
 
-    const prompt = `You are ExamBuddy AI Doubt Solver for Indian competitive exam students (UPSC, SSC, IBPS, GPSC). Answer clearly in simple English or Gujarati based on the question. Keep it concise and exam-focused.
+    const systemContext = `તમે ExamBuddy ના AI Doubt Solver Teacher છો.
+તમારો રોલ: Gujarat ના government exam students (GPSC, UPSC, TET, TAT, Police, Constable, Clerk) ના doubts clear કરવાનો છે.
 
-Previous conversation:
-${contextLines}
+Rules:
+- Gujarati ભાષામાં જ સરળ, simple explanation આપવું.
+- Examples અને mnemonics નો ઉપયોગ કરવો.
+- Important points bold style (markdown) માં highlight કરવા.
+- Exam-relevant tips include કરવી.
+- Maximum 300-400 words.
+- Student English માં પૂછે તો પણ English + Gujarati mix માં જ ઉત્તર આપવો.`;
 
-Student question: ${question}`;
+    const prompt = `${systemContext}\n\nPrevious conversation:\n${contextLines}\n\nStudent's current question: ${question}`;
 
     const result = await model.generateContent(prompt);
     const answer = result.response.text();
@@ -47,10 +43,6 @@ Student question: ${question}`;
     return Response.json({ answer });
   } catch (error) {
     console.error("Doubt solver error:", error.message);
-    // Return full error for debugging
-    return Response.json({
-      error: error.message || "Internal Server Error",
-      stack: error.stack?.split('\n')[0]
-    }, { status: 500 });
+    return Response.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
