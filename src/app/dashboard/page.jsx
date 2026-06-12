@@ -102,6 +102,9 @@ export default function DashboardPage() {
   style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '20px', padding: '6px 14px', color: '#fff', fontSize: '12px', cursor: 'pointer', fontWeight: '700' }}>
   👑 Premium Levo
 </button>
+<button onClick={() => router.push('/ai-quiz')}>
+  📸 AI Quiz
+</button>
       </div>
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 16px' }}>
