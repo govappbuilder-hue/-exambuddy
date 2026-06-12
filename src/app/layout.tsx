@@ -2,19 +2,26 @@ import "./globals.css";
 import React from "react";
 
 export const metadata = {
-  title: "ExamBuddy - Gujarat Govt Exam Preparation",
-  description: "GPSC, GSSSB, Police, SSC exam preparation platform",
+  title: "ExamBuddy - Gujarat Govt Exam | GPSC, PSI, Talati, GSSSB",
+  description: "Gujarat government exam preparation. GPSC, PSI, Talati, Bin Sachivalay, GSSSB - Mock tests, Doubt Solver in Gujarati.",
+  keywords: "GPSC, PSI, Talati, GSSSB, Gujarat exam, government exam",
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="gu">
-      <body style={{ margin: 0, padding: 0, background: "#030712" }}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      </head>
+      <body>
         {children}
       </body>
     </html>
