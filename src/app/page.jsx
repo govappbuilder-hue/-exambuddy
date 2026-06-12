@@ -1255,10 +1255,22 @@ export default function Page() {
             <button className="w-9 h-9 bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors">
               <Icon name="search" size={18} />
             </button>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-gray-900/50 shadow-sm"
+            <button
+              onClick={async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  if (confirm(`Logged in as:\n${user.email}\n\nLogout karva maangho cho?`)) {
+                    await supabase.auth.signOut();
+                    window.location.href = "/login";
+                  }
+                } else {
+                  window.location.href = "/login";
+                }
+              }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-gray-900/50 shadow-sm hover:opacity-80 transition-opacity"
               style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>
               Me
-            </div>
+            </button>
           </div>
         </div>
       </header>
