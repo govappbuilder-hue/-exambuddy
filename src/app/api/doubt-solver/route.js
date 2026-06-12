@@ -1,9 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
+// Using fetch directly - no package dependency issues
 export async function POST(request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
-
     const { question, history } = await request.json();
 
     if (!question) {
@@ -13,36 +11,40 @@ export async function POST(request) {
       return Response.json({ error: "Gemini API key is missing" }, { status: 500 });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // ✅ Use same model as other working routes in project
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
     const contextLines = history
-      ? history
-          .slice(-4)
-          .map((m) => `${m.role === "user" ? "Student" : "Teacher"}: ${m.text}`)
-          .join("\n")
+      ? history.slice(-4).map((m) =>
+          `${m.role === "user" ? "Student" : "Teacher"}: ${m.text}`
+        ).join("\n")
       : "";
 
-    const systemContext = `તમે ExamBuddy ના AI Doubt Solver Teacher છો.
-તમારો રોલ: Gujarat ના government exam students (GPSC, UPSC, TET, TAT, Police, Constable, Clerk) ના doubts clear કરવાનો છે.
+    const prompt = `You are ExamBuddy AI Doubt Solver for Indian competitive exam students (UPSC, SSC, IBPS, GPSC, TET, TAT). Answer clearly and concisely. Add exam tips when relevant. Keep under 300 words.
 
-Rules:
-- Gujarati ભાષામાં જ સરળ, simple explanation આપવું.
-- Examples અને mnemonics નો ઉપયોગ કરવો.
-- Important points bold style (markdown) માં highlight કરવા.
-- Exam-relevant tips include કરવી.
-- Maximum 300-400 words.
-- Student English માં પૂછે તો પણ English + Gujarati mix માં જ ઉત્તર આપવો.`;
+${contextLines ? `Previous conversation:\n${contextLines}\n\n` : ""}Student question: ${question}`;
 
-    const prompt = `${systemContext}\n\nPrevious conversation:\n${contextLines}\n\nStudent's current question: ${question}`;
+    // ✅ Use v1 API directly via fetch - works with any Gemini API key
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+        }),
+      }
+    );
 
-    const result = await model.generateContent(prompt);
-    const answer = result.response.text();
+    const data = await res.json();
 
+    if (!res.ok) {
+      return Response.json({ error: data.error?.message || "Gemini API error" }, { status: 500 });
+    }
+
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
     return Response.json({ answer });
+
   } catch (error) {
     console.error("Doubt solver error:", error.message);
-    return Response.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }
