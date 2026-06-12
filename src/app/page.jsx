@@ -59,7 +59,7 @@ const Badge = ({ children, color = "blue" }) => {
     amber: "bg-amber-50 text-amber-700 border border-amber-200",
     red: "bg-red-50 text-red-600 border border-red-200",
     purple: "bg-violet-50 text-violet-700 border border-violet-200",
-    gray: "bg-slate-100 text-slate-600 border border-slate-200",
+    gray: "bg-gray-800 text-gray-300 border border-gray-700",
     orange: "bg-orange-50 text-orange-700 border border-orange-200",
   };
   return (
@@ -71,7 +71,7 @@ const Badge = ({ children, color = "blue" }) => {
 
 const Card = ({ children, className = "", onClick }) => (
   <div onClick={onClick}
-    className={`bg-white border border-slate-100 rounded-2xl p-4 shadow-sm ${onClick ? "cursor-pointer hover:border-blue-200 hover:shadow-md active:scale-[0.985] transition-all duration-150" : ""} ${className}`}>
+    className={`bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-gray-900/50 shadow-sm ${onClick ? "cursor-pointer hover:border-blue-200 hover:shadow-md active:scale-[0.985] transition-all duration-150" : ""} ${className}`}>
     {children}
   </div>
 );
@@ -85,13 +85,13 @@ const StatCard = ({ label, value, sub, icon, color = "blue", trend }) => {
   };
   const p = palettes[color];
   return (
-    <div className={`bg-white border ${p.border} rounded-2xl p-4 shadow-sm relative overflow-hidden`}>
+    <div className={`bg-gray-900 border ${p.border} rounded-2xl p-4 shadow-gray-900/50 shadow-sm relative overflow-hidden`}>
       <div className={`absolute -right-4 -top-4 w-16 h-16 ${p.ring} rounded-full opacity-50`} />
       <div className="flex items-start justify-between relative">
         <div>
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">{label}</p>
-          <p className="text-2xl font-black text-slate-900">{value}</p>
-          {sub && <p className={`text-[11px] font-semibold mt-0.5 ${trend === "up" ? "text-emerald-600" : "text-slate-400"}`}>{sub}</p>}
+          <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">{label}</p>
+          <p className="text-2xl font-black text-gray-50">{value}</p>
+          {sub && <p className={`text-[11px] font-semibold mt-0.5 ${trend === "up" ? "text-emerald-600" : "text-gray-500"}`}>{sub}</p>}
         </div>
         <div className={`p-2.5 rounded-xl ${p.light} ${p.text}`}>
           <Icon name={icon} size={18} />
@@ -106,8 +106,8 @@ const SubjectPills = ({ active, onChange }) => (
     {SUBJECTS.map(s => (
       <button key={s} onClick={() => onChange(s)}
         className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${active === s
-          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-          : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+          ? "bg-blue-600 text-white border-blue-600 shadow-gray-900/50 shadow-sm"
+          : "bg-gray-900 text-gray-300 border-gray-700 hover:border-blue-300"}`}>
         {s}
       </button>
     ))}
@@ -149,20 +149,20 @@ const DashboardTab = ({ setActiveTab }) => {
     <div className="space-y-5">
       {/* Hero Banner */}
       <div className="relative rounded-3xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1e40af 0%, #4338ca 50%, #6d28d9 100%)" }}>
-        <div className="absolute -right-12 -top-12 w-44 h-44 bg-white opacity-5 rounded-full" />
-        <div className="absolute right-4 top-8 w-20 h-20 bg-white opacity-5 rounded-full" />
-        <div className="absolute left-24 -bottom-10 w-32 h-32 bg-white opacity-5 rounded-full" />
+        <div className="absolute -right-12 -top-12 w-44 h-44 bg-gray-900 opacity-5 rounded-full" />
+        <div className="absolute right-4 top-8 w-20 h-20 bg-gray-900 opacity-5 rounded-full" />
+        <div className="absolute left-24 -bottom-10 w-32 h-32 bg-gray-900 opacity-5 rounded-full" />
         <div className="p-5 relative">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 mb-2.5 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-1.5 bg-gray-900/15 rounded-full px-3 py-1 mb-2.5 backdrop-blur-sm">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
                 <span className="text-white text-xs font-semibold">Good Morning 👋</span>
               </div>
               <h2 className="text-xl font-black text-white leading-tight">Ready to crack<br />today's exam? 🎯</h2>
               <p className="text-blue-200 text-xs mt-2">3 pending quizzes • 2 new flashcard sets</p>
             </div>
-            <div className="text-center bg-white/15 rounded-2xl px-3.5 py-2.5 backdrop-blur-sm border border-white/10">
+            <div className="text-center bg-gray-900/15 rounded-2xl px-3.5 py-2.5 backdrop-blur-sm border border-white/10">
               <div className="flex items-center gap-1 text-amber-300 justify-center">
                 <Icon name="fire" size={16} />
                 <span className="text-2xl font-black text-white">{streak}</span>
@@ -174,8 +174,8 @@ const DashboardTab = ({ setActiveTab }) => {
             {days.map((d, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${completed[i]
-                  ? "bg-white text-blue-700 shadow-md"
-                  : "bg-white/15 text-blue-200 border border-white/20"}`}>
+                  ? "bg-gray-900 text-blue-700 shadow-md"
+                  : "bg-gray-900/15 text-blue-200 border border-white/20"}`}>
                   {completed[i] ? <Icon name="check" size={13} /> : d}
                 </div>
                 <span className="text-[10px] text-blue-300 font-semibold">{d}</span>
@@ -196,7 +196,7 @@ const DashboardTab = ({ setActiveTab }) => {
       {/* Quick Actions */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-black text-slate-800">Quick Actions</h3>
+          <h3 className="text-sm font-black text-gray-100">Quick Actions</h3>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {[
@@ -206,12 +206,12 @@ const DashboardTab = ({ setActiveTab }) => {
             { label: "Today's News", sub: "Current Affairs", icon: "newspaper", tab: "current", bg: "bg-amber-50", icon_color: "text-amber-600" },
           ].map((a) => (
             <button key={a.tab} onClick={() => setActiveTab(a.tab)}
-              className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-blue-200 active:scale-95 transition-all text-left group">
+              className="bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-gray-900/50 shadow-sm hover:shadow-md hover:border-blue-200 active:scale-95 transition-all text-left group">
               <div className={`w-9 h-9 rounded-xl ${a.bg} ${a.icon_color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform`}>
                 <Icon name={a.icon} size={18} />
               </div>
-              <p className="text-sm font-bold text-slate-800">{a.label}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{a.sub}</p>
+              <p className="text-sm font-bold text-gray-100">{a.label}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{a.sub}</p>
             </button>
           ))}
         </div>
@@ -221,15 +221,15 @@ const DashboardTab = ({ setActiveTab }) => {
       <Card>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-sm font-black text-slate-800">Today's Targets</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{todos.filter(t => t.done).length}/{todos.length} done · {donePct}% complete</p>
+            <h3 className="text-sm font-black text-gray-100">Today's Targets</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{todos.filter(t => t.done).length}/{todos.length} done · {donePct}% complete</p>
           </div>
           <button className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white hover:bg-blue-700 transition-colors">
             <Icon name="plus" size={15} />
           </button>
         </div>
         {/* ✅ Progress bar live update */}
-        <div className="h-1.5 bg-slate-100 rounded-full mb-4 overflow-hidden">
+        <div className="h-1.5 bg-gray-800 rounded-full mb-4 overflow-hidden">
           <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700"
             style={{ width: `${donePct}%` }} />
         </div>
@@ -238,10 +238,10 @@ const DashboardTab = ({ setActiveTab }) => {
             <button key={i} onClick={() => toggleTodo(i)} className="w-full flex items-center gap-3 group text-left">
               <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${t.done
                 ? "bg-emerald-500 border-emerald-500 text-white"
-                : "border-slate-300 group-hover:border-blue-400"}`}>
+                : "border-gray-600 group-hover:border-blue-400"}`}>
                 {t.done && <Icon name="check" size={11} />}
               </div>
-              <span className={`text-sm transition-colors ${t.done ? "line-through text-slate-400" : "text-slate-700"}`}>{t.task}</span>
+              <span className={`text-sm transition-colors ${t.done ? "line-through text-gray-500" : "text-gray-200"}`}>{t.task}</span>
             </button>
           ))}
         </div>
@@ -250,7 +250,7 @@ const DashboardTab = ({ setActiveTab }) => {
       {/* Weakness */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-black text-slate-800">Weakness Analytics</h3>
+          <h3 className="text-sm font-black text-gray-100">Weakness Analytics</h3>
           <button className="text-xs font-semibold text-blue-600">View All</button>
         </div>
         <div className="space-y-3.5">
@@ -262,13 +262,13 @@ const DashboardTab = ({ setActiveTab }) => {
           ].map((s) => (
             <div key={s.subject}>
               <div className="flex justify-between items-center text-xs mb-1.5">
-                <span className="font-semibold text-slate-700">{s.subject}</span>
+                <span className="font-semibold text-gray-200">{s.subject}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400 font-semibold">{s.pct}%</span>
+                  <span className="text-gray-500 font-semibold">{s.pct}%</span>
                   <Badge color={s.tag}>{s.label}</Badge>
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full ${s.color} transition-all duration-700`} style={{ width: `${s.pct}%` }} />
               </div>
             </div>
@@ -279,7 +279,7 @@ const DashboardTab = ({ setActiveTab }) => {
       {/* ✅ BUG FIX 5: Live Exam Countdown */}
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-black text-slate-800">Exam Countdown ⏳</h3>
+          <h3 className="text-sm font-black text-gray-100">Exam Countdown ⏳</h3>
           <button className="text-xs font-semibold text-blue-600">+ Add</button>
         </div>
         <div className="space-y-1">
@@ -287,12 +287,12 @@ const DashboardTab = ({ setActiveTab }) => {
             <div key={e.exam} className={`flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0 ${e.urgent ? "bg-red-50/50 -mx-4 px-4 rounded-xl" : ""}`}>
               <span className="text-lg">{e.icon}</span>
               <div className="flex-1">
-                <p className={`text-sm font-bold ${e.urgent ? "text-red-700" : "text-slate-800"}`}>{e.exam}</p>
-                <p className="text-xs text-slate-400">{e.dateStr}</p>
+                <p className={`text-sm font-bold ${e.urgent ? "text-red-700" : "text-gray-100"}`}>{e.exam}</p>
+                <p className="text-xs text-gray-500">{e.dateStr}</p>
               </div>
               <div className={`text-center px-3 py-1.5 rounded-xl border ${e.urgent ? "bg-red-100 border-red-200" : e.days < 50 ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200"}`}>
                 <p className={`text-lg font-black ${e.urgent ? "text-red-600" : e.days < 50 ? "text-amber-600" : "text-emerald-600"}`}>{e.days}</p>
-                <p className="text-[10px] text-slate-400 font-bold">DAYS</p>
+                <p className="text-[10px] text-gray-500 font-bold">DAYS</p>
               </div>
             </div>
           ))}
@@ -394,8 +394,8 @@ const QuizTab = () => {
   if (phase === "home") return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-black text-slate-900">AI Quiz Generator</h2>
-        <p className="text-sm text-slate-400 mt-0.5">Upload material or pick a preset quiz</p>
+        <h2 className="text-lg font-black text-gray-50">AI Quiz Generator</h2>
+        <p className="text-sm text-gray-500 mt-0.5">Upload material or pick a preset quiz</p>
       </div>
       <div className="border-2 border-dashed border-blue-200 rounded-2xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group bg-gradient-to-br from-slate-50 to-blue-50/20">
         <div className="flex justify-center gap-3 mb-3">
@@ -406,8 +406,8 @@ const QuizTab = () => {
             <Icon name="camera" size={20} />
           </div>
         </div>
-        <p className="text-sm font-bold text-slate-700 mb-1">Upload PDF or Photo</p>
-        <p className="text-xs text-slate-400">AI will generate smart questions instantly</p>
+        <p className="text-sm font-bold text-gray-200 mb-1">Upload PDF or Photo</p>
+        <p className="text-xs text-gray-500">AI will generate smart questions instantly</p>
       </div>
 
       <SubjectPills active={subject} onChange={setSubject} />
@@ -418,19 +418,19 @@ const QuizTab = () => {
             <Icon name="lightning" size={18} />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-700">Negative Marking</p>
-            <p className="text-xs text-slate-400">–0.25 per wrong answer</p>
+            <p className="text-sm font-bold text-gray-200">Negative Marking</p>
+            <p className="text-xs text-gray-500">–0.25 per wrong answer</p>
           </div>
         </div>
         <button onClick={() => setNegativeMode(!negativeMode)}
-          className={`w-12 h-6 rounded-full transition-all duration-300 relative ${negativeMode ? "bg-red-500 shadow-md" : "bg-slate-200"}`}>
-          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${negativeMode ? "left-6" : "left-0.5"}`} />
+          className={`w-12 h-6 rounded-full transition-all duration-300 relative ${negativeMode ? "bg-red-500 shadow-md" : "bg-gray-700"}`}>
+          <span className={`absolute top-0.5 w-5 h-5 bg-gray-900 rounded-full shadow transition-all duration-300 ${negativeMode ? "left-6" : "left-0.5"}`} />
         </button>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-black text-slate-800">Preset Quizzes</h3>
+          <h3 className="text-sm font-black text-gray-100">Preset Quizzes</h3>
           <button className="text-xs font-semibold text-blue-600">View All</button>
         </div>
         <div className="space-y-2.5">
@@ -445,9 +445,9 @@ const QuizTab = () => {
                   <Icon name="quiz" size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800 truncate mb-0.5">{qz.title}</p>
+                  <p className="text-sm font-bold text-gray-100 truncate mb-0.5">{qz.title}</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-slate-400">{qz.q} Qs · {qz.mins} min · {qz.topic}</p>
+                    <p className="text-xs text-gray-500">{qz.q} Qs · {qz.mins} min · {qz.topic}</p>
                     {qz.badge && <Badge color={qz.bColor || "blue"}>{qz.badge}</Badge>}
                   </div>
                 </div>
@@ -482,16 +482,16 @@ const QuizTab = () => {
             </div>
           </div>
           <h2 className={`text-lg font-black mb-1 ${grade.color}`}>{grade.label}</h2>
-          <p className="text-sm text-slate-500">Final Score: {finalScore.toFixed(1)} / {questions.length}</p>
+          <p className="text-sm text-gray-400">Final Score: {finalScore.toFixed(1)} / {questions.length}</p>
           <div className="flex justify-center gap-8 mt-5 pt-4 border-t border-white/50">
-            <div><p className="text-xl font-black text-emerald-600">{score}</p><p className="text-xs text-slate-400 font-semibold">Correct</p></div>
-            <div><p className="text-xl font-black text-red-500">{wrong}</p><p className="text-xs text-slate-400 font-semibold">Wrong</p></div>
-            <div><p className="text-xl font-black text-slate-400">{questions.length - score - wrong}</p><p className="text-xs text-slate-400 font-semibold">Skipped</p></div>
+            <div><p className="text-xl font-black text-emerald-600">{score}</p><p className="text-xs text-gray-500 font-semibold">Correct</p></div>
+            <div><p className="text-xl font-black text-red-500">{wrong}</p><p className="text-xs text-gray-500 font-semibold">Wrong</p></div>
+            <div><p className="text-xl font-black text-gray-500">{questions.length - score - wrong}</p><p className="text-xs text-gray-500 font-semibold">Skipped</p></div>
           </div>
           {negativeMode && <p className="text-xs text-amber-700 mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 font-semibold mx-4">⚡ Negative marking: –{(wrong * 0.25).toFixed(2)} pts deducted</p>}
         </Card>
         <div>
-          <h3 className="text-sm font-black text-slate-700 mb-3">📋 Question Review</h3>
+          <h3 className="text-sm font-black text-gray-200 mb-3">📋 Question Review</h3>
           <div className="space-y-3">
             {questions.map((qq, i) => {
               const userAns = answers[i];
@@ -502,12 +502,12 @@ const QuizTab = () => {
                     <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 ${correct ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}>
                       <Icon name={correct ? "check" : "x"} size={11} />
                     </div>
-                    <p className="text-sm font-semibold text-slate-800 leading-snug">{qq.q}</p>
+                    <p className="text-sm font-semibold text-gray-100 leading-snug">{qq.q}</p>
                   </div>
                   <div className="ml-7 space-y-1.5">
                     <p className="text-xs text-emerald-700 font-semibold bg-emerald-50 rounded-lg px-2 py-1">✓ {qq.opts[qq.ans]}</p>
                     {!correct && userAns != null && <p className="text-xs text-red-600 font-semibold bg-red-50 rounded-lg px-2 py-1">✗ Your answer: {qq.opts[userAns]}</p>}
-                    {qq.exp && <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-2 py-1">💡 {qq.exp}</p>}
+                    {qq.exp && <p className="text-xs text-gray-400 bg-gray-950 rounded-lg px-2 py-1">💡 {qq.exp}</p>}
                   </div>
                 </Card>
               );
@@ -527,28 +527,28 @@ const QuizTab = () => {
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5 items-center flex-1">
           {questions.map((_, i) => (
-            <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i < current ? "bg-blue-500" : i === current ? "bg-blue-400" : "bg-slate-200"}`}
+            <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i < current ? "bg-blue-500" : i === current ? "bg-blue-400" : "bg-gray-700"}`}
               style={{ width: i === current ? 32 : 18 }} />
           ))}
-          <span className="text-xs text-slate-400 font-bold ml-1">{current + 1}/{questions.length}</span>
+          <span className="text-xs text-gray-500 font-bold ml-1">{current + 1}/{questions.length}</span>
         </div>
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-sm ml-3 ${timeLeft !== null && timeLeft < 60 ? "bg-red-50 text-red-600 border border-red-200 animate-pulse" : "bg-slate-100 text-slate-600"}`}>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-sm ml-3 ${timeLeft !== null && timeLeft < 60 ? "bg-red-50 text-red-600 border border-red-200 animate-pulse" : "bg-gray-800 text-gray-300"}`}>
           ⏱ {fmtTime(timeLeft)}
         </div>
       </div>
       <Card>
         <div className="flex items-center gap-2 mb-3">
           <Badge color="gray">{q.topic}</Badge>
-          <span className="text-xs text-slate-400 font-semibold">Question {current + 1}</span>
+          <span className="text-xs text-gray-500 font-semibold">Question {current + 1}</span>
         </div>
-        <p className="text-base font-bold text-slate-900 leading-relaxed mb-5">{q.q}</p>
+        <p className="text-base font-bold text-gray-50 leading-relaxed mb-5">{q.q}</p>
         <div className="space-y-2.5">
           {q.opts.map((opt, i) => {
-            let cls = "border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50/50";
+            let cls = "border-gray-700 text-gray-200 hover:border-blue-400 hover:bg-blue-50/50";
             if (selected !== null) {
               if (i === q.ans) cls = "border-emerald-400 bg-emerald-50 text-emerald-800";
               else if (i === selected && selected !== q.ans) cls = "border-red-400 bg-red-50 text-red-800";
-              else cls = "border-slate-100 text-slate-400 opacity-50";
+              else cls = "border-gray-800 text-gray-500 opacity-50";
             }
             return (
               <button key={i} onClick={() => handleAnswer(i)}
@@ -610,12 +610,12 @@ const DoubtTab = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
-      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-800">
         <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center text-white">
           <Icon name="brain" size={18} />
         </div>
         <div>
-          <p className="text-sm font-black text-slate-800">AI Doubt Solver</p>
+          <p className="text-sm font-black text-gray-100">AI Doubt Solver</p>
           <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse inline-block" /> Online & Ready</p>
         </div>
       </div>
@@ -628,9 +628,9 @@ const DoubtTab = () => {
                 <Icon name="brain" size={13} />
               </div>
             )}
-            <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${m.role === "user"
+            <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-gray-900/50 shadow-sm ${m.role === "user"
               ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-sm"
-              : "bg-white border border-slate-100 text-slate-800 rounded-bl-sm"}`}>
+              : "bg-gray-900 border border-gray-800 text-gray-100 rounded-bl-sm"}`}>
               {m.text.split("\n").map((line, li) => <p key={li} className={li > 0 && line ? "mt-1" : ""}>{line}</p>)}
             </div>
           </div>
@@ -640,9 +640,9 @@ const DoubtTab = () => {
             <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
               <Icon name="brain" size={13} />
             </div>
-            <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 shadow-gray-900/50 shadow-sm">
               <div className="flex gap-1.5 items-center">
-                <span className="text-xs text-slate-400 font-medium mr-1">Thinking</span>
+                <span className="text-xs text-gray-500 font-medium mr-1">Thinking</span>
                 {[0, 150, 300].map(d => (
                   <span key={d} className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
                 ))}
@@ -653,14 +653,14 @@ const DoubtTab = () => {
         <div ref={bottomRef} />
       </div>
 
-      <div className="pt-3 border-t border-slate-100">
+      <div className="pt-3 border-t border-gray-800">
         <div className="flex gap-2">
-          <button className="p-2.5 border border-slate-200 rounded-xl text-slate-400 hover:text-blue-500 hover:border-blue-300 transition-colors flex-shrink-0">
+          <button className="p-2.5 border border-gray-700 rounded-xl text-gray-500 hover:text-blue-500 hover:border-blue-300 transition-colors flex-shrink-0">
             <Icon name="camera" size={18} />
           </button>
           <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()}
             placeholder="Ask your doubt..."
-            className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+            className="flex-1 px-4 py-2.5 border border-gray-700 rounded-xl text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-800 bg-gray-800 text-gray-100 placeholder-gray-500 transition-all" />
           <button onClick={send} disabled={loading}
             className="p-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-600/25 disabled:opacity-50 transition-all flex-shrink-0">
             <Icon name="send" size={18} />
@@ -719,21 +719,21 @@ const FlashcardsTab = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-900">Flashcards</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h2 className="text-lg font-black text-gray-50">Flashcards</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
             {index + 1} of {cards.length} ·{" "}
             <span className="text-emerald-600 font-bold">{known.size} known</span> ·{" "}
             <span className="text-red-500 font-bold">{review.size} to review</span>
           </p>
         </div>
-        <button className="w-9 h-9 border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-300 transition-colors">
+        <button className="w-9 h-9 border border-gray-700 rounded-xl flex items-center justify-center text-gray-500 hover:text-blue-500 hover:border-blue-300 transition-colors">
           <Icon name="upload" size={17} />
         </button>
       </div>
 
       <SubjectPills active={subject} onChange={setSubject} />
 
-      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
         <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
           style={{ width: `${donePct}%` }} />
       </div>
@@ -741,20 +741,20 @@ const FlashcardsTab = () => {
       <div style={{ perspective: "1000px" }}>
         <div onClick={() => setFlipped(!flipped)} className="cursor-pointer relative transition-all duration-500"
           style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", minHeight: 230 }}>
-          <div className="absolute inset-0 bg-white border border-slate-100 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-sm"
+          <div className="absolute inset-0 bg-gray-900 border border-gray-800 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-gray-900/50 shadow-sm"
             style={{ backfaceVisibility: "hidden" }}>
             <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 mb-3">
               <Icon name="cards" size={20} />
             </div>
             <Badge color="gray">{card.topic}</Badge>
-            <p className="text-lg font-bold text-slate-900 mt-3 leading-relaxed">{card.front}</p>
-            <p className="text-xs text-slate-400 mt-4 flex items-center gap-1">
+            <p className="text-lg font-bold text-gray-50 mt-3 leading-relaxed">{card.front}</p>
+            <p className="text-xs text-gray-500 mt-4 flex items-center gap-1">
               <Icon name="rotate" size={12} /> Tap to reveal answer
             </p>
           </div>
           <div className="absolute inset-0 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)", background: "linear-gradient(135deg, #1e40af, #4338ca, #6d28d9)" }}>
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white mb-3">
+            <div className="w-10 h-10 bg-gray-900/20 rounded-xl flex items-center justify-center text-white mb-3">
               <Icon name="check" size={20} />
             </div>
             <p className="text-white text-sm font-semibold leading-relaxed">{card.back}</p>
@@ -785,25 +785,25 @@ const FlashcardsTab = () => {
         ].map(s => (
           <div key={s.label} className={`${s.bg} rounded-2xl p-3 text-center border border-white`}>
             <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-slate-500 font-semibold">{s.label}</p>
+            <p className="text-xs text-gray-400 font-semibold">{s.label}</p>
           </div>
         ))}
       </div>
 
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-800">Personal Notes</h3>
+          <h3 className="text-sm font-bold text-gray-100">Personal Notes</h3>
           <button className="text-xs text-blue-600 font-semibold flex items-center gap-1 hover:text-blue-700">
             <Icon name="download" size={13} /> Export
           </button>
         </div>
         <textarea rows={3} placeholder="Add your notes for this card..."
-          className="w-full text-sm border border-slate-100 rounded-xl px-3 py-2 text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 resize-none transition-all" />
+          className="w-full text-sm border border-gray-700 rounded-xl px-3 py-2 text-gray-200 bg-gray-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-800 resize-none transition-all" />
         <div className="flex gap-3 mt-2">
-          <button className="text-xs text-slate-400 font-semibold flex items-center gap-1 hover:text-blue-500 transition-colors">
+          <button className="text-xs text-gray-500 font-semibold flex items-center gap-1 hover:text-blue-500 transition-colors">
             <Icon name="bookmark" size={13} /> Bookmark
           </button>
-          <button className="text-xs text-slate-400 font-semibold flex items-center gap-1 hover:text-blue-500 transition-colors">
+          <button className="text-xs text-gray-500 font-semibold flex items-center gap-1 hover:text-blue-500 transition-colors">
             <Icon name="share" size={13} /> Share
           </button>
         </div>
@@ -842,13 +842,13 @@ const CurrentTab = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-900">Current Affairs</h2>
-          <p className="text-xs text-slate-400">June 12, 2026 • Daily Update</p>
+          <h2 className="text-lg font-black text-gray-50">Current Affairs</h2>
+          <p className="text-xs text-gray-500">June 12, 2026 • Daily Update</p>
         </div>
-        <div className="flex gap-0.5 bg-slate-100 rounded-xl p-1">
+        <div className="flex gap-0.5 bg-gray-800 rounded-xl p-1">
           {["En", "Hi", "Gu"].map((l, i) => (
             <button key={l} onClick={() => setLang(["English", "Hindi", "Gujarati"][i])}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${lang === ["English", "Hindi", "Gujarati"][i] ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${lang === ["English", "Hindi", "Gujarati"][i] ? "bg-gray-900 text-gray-50 shadow-gray-900/50 shadow-sm" : "text-gray-400"}`}>
               {l}
             </button>
           ))}
@@ -859,8 +859,8 @@ const CurrentTab = () => {
         {cats.map(c => (
           <button key={c} onClick={() => setCategory(c)}
             className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${category === c
-              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-              : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+              ? "bg-blue-600 text-white border-blue-600 shadow-gray-900/50 shadow-sm"
+              : "bg-gray-900 text-gray-300 border-gray-700 hover:border-blue-300"}`}>
             {c}
           </button>
         ))}
@@ -879,14 +879,14 @@ const CurrentTab = () => {
             <button onClick={resetMcq} className="text-xs text-blue-600 font-bold hover:underline">Try Again</button>
           )}
         </div>
-        <p className="text-sm font-bold text-slate-800 mb-3">India's GDP growth rate in Q4 FY24 was closest to:</p>
+        <p className="text-sm font-bold text-gray-100 mb-3">India's GDP growth rate in Q4 FY24 was closest to:</p>
         {["6.8%", "7.6%", "8.2%", "9.1%"].map((opt, i) => {
           const correctIdx = 2;
-          let cls = "border-slate-200 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50";
+          let cls = "border-gray-700 bg-gray-900 text-gray-200 hover:border-blue-400 hover:bg-blue-50";
           if (mcqSelected !== null) {
             if (i === correctIdx) cls = "border-emerald-400 bg-emerald-50 text-emerald-800";
             else if (i === mcqSelected) cls = "border-red-400 bg-red-50 text-red-700";
-            else cls = "border-slate-100 bg-white text-slate-400 opacity-60";
+            else cls = "border-gray-800 bg-gray-900 text-gray-500 opacity-60";
           }
           return (
             <button key={i} onClick={() => handleMcqSelect(i)}
@@ -913,10 +913,10 @@ const CurrentTab = () => {
                   <Badge color={n.important ? "red" : "gray"}>{n.category}</Badge>
                   {n.important && <Badge color="amber">⭐ Exam Important</Badge>}
                 </div>
-                <p className="text-sm font-semibold text-slate-800 leading-snug">{n.title}</p>
-                <p className="text-xs text-slate-400 mt-1.5 font-medium">{n.time}</p>
+                <p className="text-sm font-semibold text-gray-100 leading-snug">{n.title}</p>
+                <p className="text-xs text-gray-500 mt-1.5 font-medium">{n.time}</p>
               </div>
-              <button className="text-slate-300 hover:text-blue-500 flex-shrink-0 mt-0.5 transition-colors">
+              <button className="text-gray-600 hover:text-blue-500 flex-shrink-0 mt-0.5 transition-colors">
                 <Icon name="bookmark" size={16} />
               </button>
             </div>
@@ -926,8 +926,8 @@ const CurrentTab = () => {
 
       <Card className="flex items-center justify-between bg-gradient-to-r from-slate-50 to-blue-50 border-blue-100">
         <div>
-          <p className="text-sm font-bold text-slate-800">Download Monthly Digest</p>
-          <p className="text-xs text-slate-400">June 2026 · PDF · Free</p>
+          <p className="text-sm font-bold text-gray-100">Download Monthly Digest</p>
+          <p className="text-xs text-gray-500">June 2026 · PDF · Free</p>
         </div>
         <button className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold hover:shadow-lg hover:shadow-blue-600/25 active:scale-95 transition-all">
           <Icon name="download" size={14} /> PDF
@@ -961,14 +961,14 @@ const LeaderboardTab = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-black text-slate-900">Leaderboard 🏆</h2>
-        <p className="text-xs text-slate-400">Compete with fellow aspirants</p>
+        <h2 className="text-lg font-black text-gray-50">Leaderboard 🏆</h2>
+        <p className="text-xs text-gray-500">Compete with fellow aspirants</p>
       </div>
 
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+      <div className="flex gap-1 bg-gray-800 rounded-xl p-1">
         {[["daily", "Today"], ["weekly", "This Week"], ["monthly", "Month"]].map(([v, l]) => (
           <button key={v} onClick={() => setPeriod(v)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${period === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${period === v ? "bg-gray-900 text-gray-50 shadow-gray-900/50 shadow-sm" : "text-gray-400"}`}>
             {l}
           </button>
         ))}
@@ -985,8 +985,8 @@ const LeaderboardTab = () => {
                 <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${avatarGrad[realRank[i] - 1]} flex items-center justify-center text-white text-sm font-black shadow-md`}>
                   {u.avatar}
                 </div>
-                <p className="text-xs font-bold text-slate-700 text-center w-16 truncate">{u.name.split(" ")[0]}</p>
-                <div className="w-14 bg-gradient-to-t from-amber-300 to-amber-200 rounded-t-xl flex items-end justify-center shadow-sm"
+                <p className="text-xs font-bold text-gray-200 text-center w-16 truncate">{u.name.split(" ")[0]}</p>
+                <div className="w-14 bg-gradient-to-t from-amber-300 to-amber-200 rounded-t-xl flex items-end justify-center shadow-gray-900/50 shadow-sm"
                   style={{ height: heights[i] }}>
                   <span className="text-xs font-black text-amber-800 mb-1.5">#{realRank[i]}</span>
                 </div>
@@ -999,15 +999,15 @@ const LeaderboardTab = () => {
       <div className="space-y-2">
         {users.map((u, i) => (
           <Card key={i} className={`flex items-center gap-3 py-3 ${u.isMe ? "border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md shadow-blue-100" : ""}`}>
-            <span className={`text-sm font-black w-7 text-center ${u.isMe ? "text-blue-600" : "text-slate-400"}`}>#{u.rank}</span>
-            <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarGrad[i]} flex items-center justify-center text-white text-xs font-black shadow-sm`}>
+            <span className={`text-sm font-black w-7 text-center ${u.isMe ? "text-blue-600" : "text-gray-500"}`}>#{u.rank}</span>
+            <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarGrad[i]} flex items-center justify-center text-white text-xs font-black shadow-gray-900/50 shadow-sm`}>
               {u.avatar}
             </div>
             <div className="flex-1">
-              <p className={`text-sm font-bold ${u.isMe ? "text-blue-700" : "text-slate-800"}`}>
+              <p className={`text-sm font-bold ${u.isMe ? "text-blue-700" : "text-gray-100"}`}>
                 {u.name} {u.isMe && <Badge color="blue">You</Badge>}
               </p>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-gray-500 font-medium">
                 {u.score.toLocaleString()} pts · 🔥 <span className="text-orange-500 font-bold">{u.streak}d</span>
               </p>
             </div>
@@ -1017,7 +1017,7 @@ const LeaderboardTab = () => {
       </div>
 
       <div>
-        <h3 className="text-sm font-black text-slate-800 mb-3">Your Achievements</h3>
+        <h3 className="text-sm font-black text-gray-100 mb-3">Your Achievements</h3>
         <div className="grid grid-cols-4 gap-2.5">
           {[
             { icon: "🔥", label: "7-Day Streak", earned: true },
@@ -1026,10 +1026,10 @@ const LeaderboardTab = () => {
             { icon: "🏆", label: "Top 10", earned: false },
           ].map((b, i) => (
             <div key={i} className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border text-center ${b.earned
-              ? "border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm"
-              : "border-slate-100 bg-slate-50 opacity-40"}`}>
+              ? "border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-gray-900/50 shadow-sm"
+              : "border-gray-800 bg-gray-950 opacity-40"}`}>
               <span className="text-2xl">{b.icon}</span>
-              <p className="text-[10px] text-slate-600 font-bold leading-tight">{b.label}</p>
+              <p className="text-[10px] text-gray-300 font-bold leading-tight">{b.label}</p>
             </div>
           ))}
         </div>
@@ -1058,18 +1058,18 @@ const MarketplaceTab = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-black text-slate-900">Marketplace 🛒</h2>
-        <p className="text-xs text-slate-400">Study materials by toppers & educators</p>
+        <h2 className="text-lg font-black text-gray-50">Marketplace 🛒</h2>
+        <p className="text-xs text-gray-500">Study materials by toppers & educators</p>
       </div>
 
       <div className="relative rounded-2xl overflow-hidden p-4 flex items-center gap-3 shadow-lg"
         style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5, #2563eb)" }}>
-        <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+        <div className="absolute -right-6 -top-6 w-24 h-24 bg-gray-900/10 rounded-full blur-2xl" />
         <div className="flex-1 relative">
           <p className="font-black text-white text-sm">💰 Sell Your Study Material</p>
           <p className="text-xs text-white/80 mt-0.5">Upload PDFs & earn 70% commission</p>
         </div>
-        <button className="flex-shrink-0 px-4 py-2 bg-white text-violet-700 rounded-xl text-xs font-black hover:bg-slate-50 active:scale-95 transition-all shadow-sm">
+        <button className="flex-shrink-0 px-4 py-2 bg-gray-900 text-violet-700 rounded-xl text-xs font-black hover:bg-gray-950 active:scale-95 transition-all shadow-gray-900/50 shadow-sm">
           Upload
         </button>
       </div>
@@ -1078,8 +1078,8 @@ const MarketplaceTab = () => {
         {types.map(t => (
           <button key={t} onClick={() => setFilterType(t)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${filterType === t
-              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-              : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+              ? "bg-blue-600 text-white border-blue-600 shadow-gray-900/50 shadow-sm"
+              : "bg-gray-900 text-gray-300 border-gray-700 hover:border-blue-300"}`}>
             {t}
           </button>
         ))}
@@ -1097,16 +1097,16 @@ const MarketplaceTab = () => {
                   {item.badge && <Badge color={badgeColors[item.badge] || "gray"}>{item.badge}</Badge>}
                   <Badge color="gray">{item.type}</Badge>
                 </div>
-                <p className="text-sm font-bold text-slate-900 leading-snug">{item.title}</p>
-                <p className="text-xs text-slate-400 mt-0.5">by {item.author} · ⭐ {item.rating} · {item.downloads.toLocaleString()} downloads</p>
-                {item.pages && <p className="text-xs text-slate-400">{item.pages} pages</p>}
+                <p className="text-sm font-bold text-gray-50 leading-snug">{item.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">by {item.author} · ⭐ {item.rating} · {item.downloads.toLocaleString()} downloads</p>
+                {item.pages && <p className="text-xs text-gray-500">{item.pages} pages</p>}
               </div>
             </div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
-              <span className="text-base font-black text-slate-900">
+              <span className="text-base font-black text-gray-50">
                 {item.price === 0 ? <span className="text-emerald-600">Free ✓</span> : `₹${item.price}`}
               </span>
-              <button className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm ${item.price === 0
+              <button className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-gray-900/50 shadow-sm ${item.price === 0
                 ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/25 hover:shadow-md"
                 : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-blue-600/25 hover:shadow-md"}`}>
                 <Icon name={item.price === 0 ? "download" : "lock"} size={13} />
@@ -1131,7 +1131,7 @@ const MarketplaceTab = () => {
             { title: "IBPS PO 2025 Apply", date: "Jul 1", hot: false },
           ].map((j, i) => (
             <div key={i} className={`flex items-center justify-between py-2 border-b border-emerald-100 last:border-0 ${j.hot ? "bg-red-50/50 -mx-4 px-4 rounded-xl" : ""}`}>
-              <p className={`text-xs font-bold ${j.hot ? "text-red-700" : "text-slate-700"}`}>{j.title}</p>
+              <p className={`text-xs font-bold ${j.hot ? "text-red-700" : "text-gray-200"}`}>{j.title}</p>
               <Badge color={j.hot ? "red" : "gray"}>{j.date}</Badge>
             </div>
           ))}
@@ -1159,8 +1159,8 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40 shadow-sm">
+    <div className="min-h-screen bg-[#0f0f13] pb-24">
+      <header className="bg-[#0f0f13]/90 backdrop-blur-xl border-b border-gray-800 sticky top-0 z-40 shadow-sm">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md"
@@ -1168,19 +1168,19 @@ export default function Page() {
               <span className="text-white text-xs font-black">EB</span>
             </div>
             <div>
-              <span className="font-black text-slate-900 text-sm tracking-tight">ExamBuddy</span>
+              <span className="font-black text-gray-50 text-sm tracking-tight">ExamBuddy</span>
               <span className="ml-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">AI</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="w-9 h-9 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors relative">
+            <button className="w-9 h-9 bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors relative">
               <Icon name="bell" size={18} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
             </button>
-            <button className="w-9 h-9 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+            <button className="w-9 h-9 bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors">
               <Icon name="search" size={18} />
             </button>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-sm"
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-gray-900/50 shadow-sm"
               style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>
               Me
             </div>
@@ -1192,21 +1192,21 @@ export default function Page() {
         {tabComponents[activeTab]}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 z-40 shadow-2xl">
+      <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800 z-40 shadow-2xl">
         <div className="max-w-lg mx-auto px-1">
           <div className="flex">
             {TABS.map(tab => {
               const active = activeTab === tab.id;
               return (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-all duration-200 relative ${active ? "text-blue-600" : "text-slate-400 hover:text-slate-600"}`}>
+                  className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-all duration-200 relative ${active ? "text-blue-600" : "text-gray-500 hover:text-gray-300"}`}>
                   {active && (
                     <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-blue-600 rounded-full" />
                   )}
                   <div className={`p-1.5 rounded-xl transition-all duration-200 ${active ? "bg-blue-50" : "bg-transparent"}`}>
                     <Icon name={tab.icon} size={active ? 20 : 19} />
                   </div>
-                  <span className={`text-[10px] font-bold leading-none ${active ? "text-blue-600" : "text-slate-400"}`}>
+                  <span className={`text-[10px] font-bold leading-none ${active ? "text-blue-600" : "text-gray-500"}`}>
                     {tab.label}
                   </span>
                 </button>
