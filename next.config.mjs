@@ -7,6 +7,11 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development",
 });
 
-export default withPWA({
-  /* config options here */
-});
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    turbo: false,
+  },
+};
+
+export default withPWA(nextConfig);
