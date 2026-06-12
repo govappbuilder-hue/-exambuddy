@@ -135,9 +135,9 @@ const DashboardTab = ({ setActiveTab }) => {
 
   // ✅ BUG FIX 5: Live exam countdown using real dates
   const examDates = [
-    { exam: "UPSC Prelims 2026", date: new Date("2026-05-24"), icon: "🔴" },
     { exam: "GSSSB Junior Clerk 2026", date: new Date("2026-07-12"), icon: "🟡" },
     { exam: "IBPS PO 2026", date: new Date("2026-08-09"), icon: "🟢" },
+    { exam: "UPSC Prelims 2027", date: new Date("2027-05-23"), icon: "🔴" },
   ];
   const today = new Date();
   const exams = examDates.map(e => {
