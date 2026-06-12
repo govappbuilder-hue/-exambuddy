@@ -134,19 +134,16 @@ const DashboardTab = ({ setActiveTab }) => {
   const days = ["M", "T", "W", "T", "F", "S", "S"];
   const completed = [true, true, true, true, true, true, false];
 
-  // ✅ BUG FIX 1: Todo toggle properly updates immutable state
   const toggleTodo = (i) => {
     setTodos(prev => prev.map((t, idx) => idx === i ? { ...t, done: !t.done } : t));
   };
-// Real stats from Supabase
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { setStatsLoading(false); return; }
 
-        // Quiz history fetch
         const { data: scores } = await supabase
           .from("user_scores")
           .select("score, total, created_at")
@@ -159,17 +156,14 @@ const DashboardTab = ({ setActiveTab }) => {
           const totalQs = scores.reduce((sum, s) => sum + (s.total || 1), 0);
           const accuracy = Math.round((totalCorrect / totalQs) * 100);
 
-          // Streak calculation
           const dates = [...new Set(scores.map(s => s.created_at?.split("T")[0]))].sort().reverse();
           let currentStreak = 0;
-          const today = new Date().toISOString().split("T")[0];
           for (let i = 0; i < dates.length; i++) {
             const expected = new Date(Date.now() - i * 86400000).toISOString().split("T")[0];
             if (dates[i] === expected) currentStreak++;
             else break;
           }
 
-          // Rank (count users with more quizzes)
           const { count } = await supabase
             .from("user_scores")
             .select("user_id", { count: "exact", head: true })
@@ -179,7 +173,7 @@ const DashboardTab = ({ setActiveTab }) => {
           setStats({
             quizzes: totalQuizzes,
             accuracy: accuracy || 0,
-            flashcards: Math.floor(totalQuizzes * 2.5), // estimate
+            flashcards: Math.floor(totalQuizzes * 2.5),
             rank: count ? `#${Math.floor(count * 0.1) + 1}` : "#1"
           });
         }
@@ -190,9 +184,9 @@ const DashboardTab = ({ setActiveTab }) => {
     };
     fetchStats();
   }, []);
+
   const donePct = Math.round((todos.filter(t => t.done).length / todos.length) * 100);
 
-  // ✅ BUG FIX 5: Live exam countdown using real dates
   const examDates = [
     { exam: "GSSSB Junior Clerk 2026", date: new Date("2026-07-12"), icon: "🟡" },
     { exam: "IBPS PO 2026", date: new Date("2026-08-09"), icon: "🟢" },
@@ -204,7 +198,6 @@ const DashboardTab = ({ setActiveTab }) => {
     return { ...e, days: diff > 0 ? diff : 0, urgent: diff <= 14 && diff > 0, dateStr: e.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) };
   });
 
-  // ✅ FIX: 17 Gujarat exam tags
   const GOV_EXAMS = [
     "GPSC", "PSI", "Talati", "GSSSB", "UPSC", "Bin Sachivalay",
     "Constable", "TET", "TAT", "HTAT", "Junior Clerk", "Forest Guard",
@@ -213,7 +206,6 @@ const DashboardTab = ({ setActiveTab }) => {
 
   return (
     <div className="space-y-5">
-      {/* Hero Banner */}
       <div className="relative rounded-3xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1e40af 0%, #4338ca 50%, #6d28d9 100%)" }}>
         <div className="absolute -right-12 -top-12 w-44 h-44 bg-gray-900 opacity-5 rounded-full" />
         <div className="absolute right-4 top-8 w-20 h-20 bg-gray-900 opacity-5 rounded-full" />
@@ -251,7 +243,6 @@ const DashboardTab = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* ✅ FIX: GOV_EXAMS Tags row */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
         {GOV_EXAMS.map((tag) => (
           <span key={tag} className="flex-shrink-0 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-full px-3 py-1.5 whitespace-nowrap">
@@ -260,7 +251,6 @@ const DashboardTab = ({ setActiveTab }) => {
         ))}
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Quizzes Done" value={statsLoading ? "..." : stats.quizzes} sub={stats.quizzes > 0 ? "Real data ✓" : "No quiz yet"} icon="quiz" color="blue" trend="up" />
         <StatCard label="Accuracy" value={statsLoading ? "..." : `${stats.accuracy}%`} sub={stats.accuracy > 70 ? "↑ Great!" : "Keep going!"} icon="target" color="green" trend="up" />
@@ -268,7 +258,6 @@ const DashboardTab = ({ setActiveTab }) => {
         <StatCard label="Your Rank" value={statsLoading ? "..." : stats.rank} sub="Leaderboard" icon="trophy" color="amber" />
       </div>
 
-      {/* Quick Actions */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-black text-gray-100">Quick Actions</h3>
@@ -292,7 +281,6 @@ const DashboardTab = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* Today Targets */}
       <Card>
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -303,7 +291,6 @@ const DashboardTab = ({ setActiveTab }) => {
             <Icon name="plus" size={15} />
           </button>
         </div>
-        {/* ✅ Progress bar live update */}
         <div className="h-1.5 bg-gray-800 rounded-full mb-4 overflow-hidden">
           <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700"
             style={{ width: `${donePct}%` }} />
@@ -322,7 +309,6 @@ const DashboardTab = ({ setActiveTab }) => {
         </div>
       </Card>
 
-      {/* Weakness */}
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-black text-gray-100">Weakness Analytics</h3>
@@ -351,7 +337,6 @@ const DashboardTab = ({ setActiveTab }) => {
         </div>
       </Card>
 
-      {/* ✅ BUG FIX 5: Live Exam Countdown */}
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-black text-gray-100">Exam Countdown ⏳</h3>
@@ -390,18 +375,18 @@ const QuizTab = () => {
   const timerRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // ─── Upload state ─────────────────────────────────────────────
-  const [uploadStatus, setUploadStatus] = useState("idle"); // idle | loading | done | error
+  const [uploadStatus, setUploadStatus] = useState("idle");
   const [uploadFileName, setUploadFileName] = useState("");
 
-  // ─── AI-generated OR preset questions ─────────────────────────
-  const [questions, setQuestions] = useState([
+  const DEFAULT_QUESTIONS = [
     { q: "ગુજરાતનું રાજ્ય પક્ષી કયું છે?", opts: ["મોર", "પોપટ", "ફ્લેમિંગો (સુરખાબ)", "કબૂતર"], ans: 2, topic: "GK", exp: "ગુજરાતનું રાજ્ય પક્ષી સુરખાબ (ગ્રેટર ફ્લેમિંગો) છે." },
     { q: "ભારતનું બંધારણ ક્યારે અમલમાં આવ્યું?", opts: ["૧૯૪૭", "૧૯૫૦", "૧૯૫૨", "૧૯૫૬"], ans: 1, topic: "Polity", exp: "ભારતનું બંધારણ ૨૬ જાન્યુઆરી ૧૯૫૦ ના રોજ અમલમાં આવ્યું." },
     { q: "ગુજરાતની સ્થાપના ક્યારે થઈ?", opts: ["૧ મે ૧૯૬૦", "૧ મે ૧૯૫૮", "૧ જૂન ૧૯૬૦", "૧ જૂન ૧૯૬૨"], ans: 0, topic: "History", exp: "ગુજરાત ૧ મે ૧૯૬૦ ના રોજ અલગ રાજ્ય બન્યું." },
     { q: "વિદ્યુત પ્રવાહનો SI એકમ કયો છે?", opts: ["વૉલ્ટ", "વૉટ", "એમ્પિયર", "ઓહ્મ"], ans: 2, topic: "Science", exp: "એમ્પિયર (A) વિદ્યુત પ્રવાહનો SI એકમ છે." },
     { q: "ભારતના પ્રથમ ગવર્નર જનરલ કોણ હતા?", opts: ["લૉર્ડ માઉન્ટબેટન", "સી. રાજગોપાલાચારી", "રાજેન્દ્ર પ્રસાદ", "સરદાર પટેલ"], ans: 1, topic: "History", exp: "ભારતના પ્રથમ ભારતીય ગવર્નર જનરલ ચક્રવર્તી રાજગોપાલાચારી હતા." },
-  ]);
+  ];
+
+  const [questions, setQuestions] = useState(DEFAULT_QUESTIONS);
 
   // ─── File upload handler ───────────────────────────────────────
   const handleFileUpload = async (e) => {
@@ -430,7 +415,6 @@ const QuizTab = () => {
       const data = await res.json();
 
       if (data.questions && data.questions.length > 0) {
-        // API format → QuizTab format convert
         const converted = data.questions.map((q) => {
           const optKeys = ['a', 'b', 'c', 'd'];
           const opts = optKeys.map(k => q[k] || '');
@@ -440,28 +424,31 @@ const QuizTab = () => {
             opts,
             ans: ans === -1 ? 0 : ans,
             topic: "AI Generated",
-            exp: q.explanation || '',
+            // ✅ FIX 3: exp kabhi empty nahi rahega
+            exp: q.explanation && q.explanation.trim().length > 0
+              ? q.explanation.trim()
+              : "આ પ્રશ્નનો સાચો જવાબ ઉપર દર્શાવેલ option છે.",
           };
         });
-        setQuestions(converted);
+
         setUploadStatus("done");
-        // Auto start quiz after 1 sec
-        setTimeout(() => startQuiz(6), 1000);
+
+        // ✅ FIX 2: Race condition fix — converted directly pass karo startQuiz ma
+        // setQuestions nahi, balke startQuiz ne customQuestions pass karo
+        setTimeout(() => startQuiz(15, converted), 1000);
       } else {
         setUploadStatus("error");
-        setUploadFileName("Questions generate ना थया, फरी try कारो");
+        setUploadFileName("Questions generate ના થયા, ફરી try કરો");
       }
     } catch (err) {
       console.error('Upload error:', err);
       setUploadStatus("error");
-      setUploadFileName("Upload failed. Internet check करो.");
+      setUploadFileName("Upload failed. Internet check કરો.");
     }
 
-    // Reset input so same file re-upload kari shakay
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ✅ BUG FIX 2: Timer starts fresh every time phase becomes "quiz"
   useEffect(() => {
     if (phase === "quiz") {
       clearInterval(timerRef.current);
@@ -504,7 +491,6 @@ const QuizTab = () => {
     }, 800);
   };
 
-  // ✅ BUG FIX 2: Full reset including timeLeft
   const resetQuiz = () => {
     clearInterval(timerRef.current);
     setPhase("home");
@@ -514,15 +500,24 @@ const QuizTab = () => {
     setTimeLeft(null);
     setUploadStatus("idle");
     setUploadFileName("");
+    // Reset to default questions when going back home
+    setQuestions(DEFAULT_QUESTIONS);
   };
 
-  const startQuiz = (mins) => {
+  // ✅ FIX 2: startQuiz now accepts optional customQuestions param
+  // This COMPLETELY solves the race condition — no dependency on state update timing
+  const startQuiz = (mins, customQuestions = null) => {
     const dur = mins * 60;
     setQuizDuration(dur);
     setTimeLeft(dur);
     setCurrent(0);
     setAnswers([]);
     setSelected(null);
+    // ✅ KEY: If customQuestions provided, set them BEFORE phase change
+    // React batches these together in the same render cycle
+    if (customQuestions && customQuestions.length > 0) {
+      setQuestions(customQuestions);
+    }
     setPhase("quiz");
   };
 
@@ -537,7 +532,7 @@ const QuizTab = () => {
         <h2 className="text-lg font-black text-gray-50">AI Quiz Generator</h2>
         <p className="text-sm text-gray-500 mt-0.5">Upload material or pick a preset quiz</p>
       </div>
-      {/* ─── Hidden file input ─────────────────────────────────── */}
+
       <input
         ref={fileInputRef}
         type="file"
@@ -546,7 +541,6 @@ const QuizTab = () => {
         onChange={handleFileUpload}
       />
 
-      {/* ─── Upload box ────────────────────────────────────────── */}
       <div
         onClick={() => uploadStatus !== "loading" && fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer group
@@ -631,6 +625,7 @@ const QuizTab = () => {
             { title: "SSC CGL Reasoning Practice", q: 20, mins: 15, topic: "Reasoning", badge: null },
             { title: "History Topicwise – Ancient India", q: 15, mins: 12, topic: "History", badge: "✨ New", bColor: "green" },
           ].map((qz, i) => (
+            // Preset quizzes use default questions — no customQuestions passed
             <Card key={i} onClick={() => startQuiz(qz.mins)}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
@@ -654,6 +649,7 @@ const QuizTab = () => {
     </div>
   );
 
+  // ─── RESULT PHASE ──────────────────────────────────────────────
   if (phase === "result") {
     const grade = pct >= 80
       ? { label: "Excellent! 🏆", color: "text-emerald-600", bg: "from-emerald-50 to-green-50", border: "border-emerald-200", ring: "#10b981" }
@@ -682,6 +678,8 @@ const QuizTab = () => {
           </div>
           {negativeMode && <p className="text-xs text-amber-700 mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 font-semibold mx-4">⚡ Negative marking: –{(wrong * 0.25).toFixed(2)} pts deducted</p>}
         </Card>
+
+        {/* ─── Question Review with FIX 3 ──────────────────────── */}
         <div>
           <h3 className="text-sm font-black text-gray-200 mb-3">📋 Question Review</h3>
           <div className="space-y-3">
@@ -697,15 +695,29 @@ const QuizTab = () => {
                     <p className="text-sm font-semibold text-gray-100 leading-snug">{qq.q}</p>
                   </div>
                   <div className="ml-7 space-y-1.5">
-                    <p className="text-xs text-emerald-700 font-semibold bg-emerald-50 rounded-lg px-2 py-1">✓ {qq.opts[qq.ans]}</p>
-                    {!correct && userAns != null && <p className="text-xs text-red-600 font-semibold bg-red-50 rounded-lg px-2 py-1">✗ Your answer: {qq.opts[userAns]}</p>}
-                    {qq.exp && <p className="text-xs text-gray-400 bg-gray-950 rounded-lg px-2 py-1">💡 {qq.exp}</p>}
+                    {/* Correct answer — always show */}
+                    <p className="text-xs text-emerald-700 font-semibold bg-emerald-50 rounded-lg px-2 py-1">
+                      ✓ Correct: {qq.opts[qq.ans]}
+                    </p>
+                    {/* User's wrong answer */}
+                    {!correct && userAns != null && (
+                      <p className="text-xs text-red-600 font-semibold bg-red-50 rounded-lg px-2 py-1">
+                        ✗ Your answer: {qq.opts[userAns]}
+                      </p>
+                    )}
+                    {/* ✅ FIX 3: Explanation ALWAYS shows — never empty */}
+                    <p className="text-xs text-gray-400 bg-gray-950 rounded-lg px-2 py-1.5 leading-relaxed">
+                      💡 {qq.exp && qq.exp.trim().length > 0
+                        ? qq.exp
+                        : "આ પ્રશ્નનો સાચો જવાબ ઉપર દર્શાવેલ option છે."}
+                    </p>
                   </div>
                 </Card>
               );
             })}
           </div>
         </div>
+
         <button onClick={resetQuiz}
           className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-bold hover:shadow-lg hover:shadow-blue-600/25 active:scale-95 transition-all">
           ← Back to Quizzes
@@ -714,6 +726,7 @@ const QuizTab = () => {
     );
   }
 
+  // ─── QUIZ PHASE ────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -773,7 +786,6 @@ const DoubtTab = () => {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  // ✅ BUG FIX 1 (Doubt Solver): Proper API call - key handled by Next.js env, CORS safe
   const send = async () => {
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
@@ -781,7 +793,6 @@ const DoubtTab = () => {
     setMessages(prev => [...prev, { role: "user", text: userMsg }]);
     setLoading(true);
     try {
-      // Build history for context (last 6 messages)
       const history = messages.slice(-6).map(m => ({ role: m.role, text: m.text }));
       const res = await fetch("/api/doubt-solver", {
         method: "POST",
@@ -875,7 +886,6 @@ const DoubtTab = () => {
 const FlashcardsTab = () => {
   const [flipped, setFlipped] = useState(false);
   const [index, setIndex] = useState(0);
-  // ✅ BUG FIX 3: Use Sets to prevent duplicate counting
   const [known, setKnown] = useState(new Set());
   const [review, setReview] = useState(new Set());
   const [subject, setSubject] = useState("All");
@@ -891,7 +901,6 @@ const FlashcardsTab = () => {
   const card = cards[index];
 
   const next = (action) => {
-    // ✅ BUG FIX 3: Sets prevent same card being counted multiple times
     if (action === "known") {
       setKnown(prev => new Set([...prev, index]));
       setReview(prev => { const s = new Set(prev); s.delete(index); return s; });
@@ -904,7 +913,6 @@ const FlashcardsTab = () => {
   };
 
   const donePct = (index / cards.length) * 100;
-  // ✅ BUG FIX 3: Accurate remaining = total - (known + review), minimum 0
   const remaining = Math.max(0, cards.length - known.size - review.size);
 
   return (
@@ -968,7 +976,6 @@ const FlashcardsTab = () => {
         </div>
       )}
 
-      {/* ✅ BUG FIX 3: Accurate session stats using Set sizes */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: "Remaining", value: remaining, color: "text-blue-600", bg: "bg-blue-50" },
@@ -1008,7 +1015,6 @@ const FlashcardsTab = () => {
 const CurrentTab = () => {
   const [lang, setLang] = useState("English");
   const [category, setCategory] = useState("All");
-  // ✅ BUG FIX 4: MCQ resets when tab revisited - stored per session only
   const [mcqSelected, setMcqSelected] = useState(null);
   const [mcqResetKey, setMcqResetKey] = useState(0);
 
@@ -1024,10 +1030,7 @@ const CurrentTab = () => {
   const cats = ["All", "Economy", "Polity", "Defence", "Science", "Environment", "Education"];
   const filtered = category === "All" ? news : news.filter(n => n.category === category);
 
-  // ✅ BUG FIX 4: Reset MCQ handler
-  const handleMcqSelect = (i) => {
-    if (mcqSelected === null) setMcqSelected(i);
-  };
+  const handleMcqSelect = (i) => { if (mcqSelected === null) setMcqSelected(i); };
   const resetMcq = () => { setMcqSelected(null); setMcqResetKey(k => k + 1); };
 
   return (
@@ -1058,7 +1061,6 @@ const CurrentTab = () => {
         ))}
       </div>
 
-      {/* ✅ BUG FIX 4: MCQ with reset button */}
       <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50" key={mcqResetKey}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">

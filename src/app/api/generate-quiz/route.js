@@ -93,17 +93,16 @@ JSON structure:
 
     if (imageBase64 && imageMimeType) {
       // ─── Vision mode: Image → Quiz ──────────────────────────────
-      result = await model.generateContent([
-        {
-          inlineData: {
-            mimeType: imageMimeType,
-            data: imageBase64,
-          },
-        },
-        {
-          text: `${gujaratiInstruction}\n\nઆ image/photo ના content ના આધારે ૩ MCQ questions બનાવો. ફક્ત JSON આપો.`,
-        },
-      ]);
+      // TEXT MODE:
+result = await model.generateContent(
+  `${gujaratiInstruction}\n\nઆ text ના આધારે 10 MCQ questions બનાવો. દરેક question unique ane exam-relevant hoy. Mandatory: explanation field khali na rakho:\n"${textContent.slice(0, 4000)}"\n\nFaqt JSON apo.`
+);
+
+// IMAGE/VISION MODE:
+result = await model.generateContent([
+  { inlineData: { mimeType: imageMimeType, data: imageBase64 } },
+  { text: `${gujaratiInstruction}\n\nAa image na content mathi 10 MCQ questions banavo. explanation mandatory che. Faqt JSON apo.` },
+]);
     } else if (textContent.trim().length > 10) {
       // ─── Text mode: PDF text / custom text → Quiz ───────────────
       result = await model.generateContent(
