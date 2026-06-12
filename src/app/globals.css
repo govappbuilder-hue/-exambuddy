@@ -48,3 +48,6 @@ html {
 button {
   transition: all 0.15s ease;
 }
+/* Hide scrollbar for tag chips row */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

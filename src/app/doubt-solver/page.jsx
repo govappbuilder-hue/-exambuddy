@@ -3,12 +3,14 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const QUICK_TOPICS = [
-  '📜 બંધારણ ના Article 356 સમજાવો',
-  '🔢 LCM અને HCF ની ટ્રિક',
-  '🌍 ભારત ની નદીઓ ની યાદી',
-  '📰 Lok Sabha vs Rajya Sabha તફાવત',
-  '🧩 Syllogism solve કેવી રીતે?',
-  '🏛️ ગુપ્ત સામ્રાજ્ય ક્યારે હતું?',
+  '📜 GPSC Mukhya Pariksha Syllabus શું છે?',
+  '🔢 Talati ની ગણિત ની Short Tricks',
+  '🌍 ગુજરાત ના જિલ્લા અને તેમની વિશેષતા',
+  '📰 GSSSB Junior Clerk ની તૈયારી કેવી રીતે કરવી?',
+  '🧩 Reasoning ના Series Question Solve કેવી રીતે?',
+  '🏛️ ગુજરાત નો ઇતિહાસ — સોલંકી વંશ',
+  '⚖️ ભારતીય બંધારણ ના Fundamental Rights',
+  '💻 Computer Awareness — MS Excel Shortcuts',
 ];
 
 const INITIAL_MESSAGE = {

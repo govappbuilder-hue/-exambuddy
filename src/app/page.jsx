@@ -135,15 +135,22 @@ const DashboardTab = ({ setActiveTab }) => {
 
   // ✅ BUG FIX 5: Live exam countdown using real dates
   const examDates = [
-    { exam: "UPSC Prelims 2025", date: new Date("2025-05-26"), icon: "🔴" },
-    { exam: "SSC CGL Tier I", date: new Date("2025-06-20"), icon: "🟡" },
-    { exam: "IBPS PO", date: new Date("2025-08-15"), icon: "🟢" },
+    { exam: "UPSC Prelims 2026", date: new Date("2026-05-24"), icon: "🔴" },
+    { exam: "GSSSB Junior Clerk 2026", date: new Date("2026-07-12"), icon: "🟡" },
+    { exam: "IBPS PO 2026", date: new Date("2026-08-09"), icon: "🟢" },
   ];
   const today = new Date();
   const exams = examDates.map(e => {
     const diff = Math.ceil((e.date - today) / (1000 * 60 * 60 * 24));
     return { ...e, days: diff > 0 ? diff : 0, urgent: diff <= 14 && diff > 0, dateStr: e.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) };
   });
+
+  // ✅ FIX: 17 Gujarat exam tags
+  const GOV_EXAMS = [
+    "GPSC", "PSI", "Talati", "GSSSB", "UPSC", "Bin Sachivalay",
+    "Constable", "TET", "TAT", "HTAT", "Junior Clerk", "Forest Guard",
+    "Police Sub-Inspector", "Revenue Talati", "GPSC AE", "IBPS PO", "Railway NTPC",
+  ];
 
   return (
     <div className="space-y-5">
@@ -183,6 +190,15 @@ const DashboardTab = ({ setActiveTab }) => {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ✅ FIX: GOV_EXAMS Tags row */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        {GOV_EXAMS.map((tag) => (
+          <span key={tag} className="flex-shrink-0 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-full px-3 py-1.5 whitespace-nowrap">
+            {tag}
+          </span>
+        ))}
       </div>
 
       {/* Stats */}
@@ -1126,9 +1142,9 @@ const MarketplaceTab = () => {
         </div>
         <div className="space-y-1">
           {[
-            { title: "UPSC CSE 2025 Notification", date: "Out Now", hot: true },
-            { title: "SSC CGL 2024 Result", date: "Jun 10", hot: false },
-            { title: "IBPS PO 2025 Apply", date: "Jul 1", hot: false },
+            { title: "UPSC CSE 2025 — Mains Result Out", date: "Out Now", hot: true },
+            { title: "GSSSB Junior Clerk 2026 Notification", date: "New", hot: true },
+            { title: "IBPS PO 2026 Apply Online", date: "Aug 9", hot: false },
           ].map((j, i) => (
             <div key={i} className={`flex items-center justify-between py-2 border-b border-emerald-100 last:border-0 ${j.hot ? "bg-red-50/50 -mx-4 px-4 rounded-xl" : ""}`}>
               <p className={`text-xs font-bold ${j.hot ? "text-red-700" : "text-gray-200"}`}>{j.title}</p>
