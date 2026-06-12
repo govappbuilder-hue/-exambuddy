@@ -98,10 +98,10 @@ export default function DashboardPage() {
           <span style={{ fontSize: '20px' }}>📚</span>
           <span style={{ fontSize: '18px', fontWeight: '900', background: 'linear-gradient(90deg,#6366f1,#0ea5e9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ExamBuddy</span>
         </div>
-        <button onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }}
-          style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '20px', padding: '6px 14px', color: '#94a3b8', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
-          ⚡ Free
-        </button>
+        <button onClick={() => router.push('/premium')}
+  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '20px', padding: '6px 14px', color: '#fff', fontSize: '12px', cursor: 'pointer', fontWeight: '700' }}>
+  👑 Premium Levo
+</button>
       </div>
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 16px' }}>
