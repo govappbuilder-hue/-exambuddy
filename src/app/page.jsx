@@ -385,18 +385,81 @@ const QuizTab = () => {
   const [answers, setAnswers] = useState([]);
   const [negativeMode, setNegativeMode] = useState(false);
   const [subject, setSubject] = useState("All");
-  // ✅ BUG FIX 2: timeLeft initialized as null, set only when quiz starts
   const [timeLeft, setTimeLeft] = useState(null);
   const [quizDuration, setQuizDuration] = useState(360);
   const timerRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const questions = [
-    { q: "Who was the first Viceroy of India?", opts: ["Lord Canning", "Lord Dalhousie", "Lord Curzon", "Lord Irwin"], ans: 0, topic: "History", exp: "Lord Canning became the first Viceroy of India in 1858 after the Government of India Act." },
-    { q: "The Tropic of Cancer passes through how many Indian states?", opts: ["6", "7", "8", "9"], ans: 2, topic: "Geography", exp: "8 states: Gujarat, Rajasthan, MP, Chhattisgarh, Jharkhand, West Bengal, Tripura, Mizoram." },
-    { q: "Which Article deals with Right to Equality?", opts: ["Article 12", "Article 14", "Article 19", "Article 21"], ans: 1, topic: "Polity", exp: "Article 14 guarantees equality before law and equal protection of laws within India." },
-    { q: "What is the SI unit of electric current?", opts: ["Volt", "Watt", "Ampere", "Ohm"], ans: 2, topic: "Science", exp: "Ampere (A) is the SI unit of electric current, named after André-Marie Ampère." },
-    { q: "Which Five Year Plan focused on 'Garibi Hatao'?", opts: ["3rd", "4th", "5th", "6th"], ans: 2, topic: "Economics", exp: "5th Five Year Plan (1974-79) under Indira Gandhi had the 'Garibi Hatao' slogan." },
-  ];
+  // ─── Upload state ─────────────────────────────────────────────
+  const [uploadStatus, setUploadStatus] = useState("idle"); // idle | loading | done | error
+  const [uploadFileName, setUploadFileName] = useState("");
+
+  // ─── AI-generated OR preset questions ─────────────────────────
+  const [questions, setQuestions] = useState([
+    { q: "ગુજરાતનું રાજ્ય પક્ષી કયું છે?", opts: ["મોર", "પોપટ", "ફ્લેમિંગો (સુરખાબ)", "કબૂતર"], ans: 2, topic: "GK", exp: "ગુજરાતનું રાજ્ય પક્ષી સુરખાબ (ગ્રેટર ફ્લેમિંગો) છે." },
+    { q: "ભારતનું બંધારણ ક્યારે અમલમાં આવ્યું?", opts: ["૧૯૪૭", "૧૯૫૦", "૧૯૫૨", "૧૯૫૬"], ans: 1, topic: "Polity", exp: "ભારતનું બંધારણ ૨૬ જાન્યુઆરી ૧૯૫૦ ના રોજ અમલમાં આવ્યું." },
+    { q: "ગુજરાતની સ્થાપના ક્યારે થઈ?", opts: ["૧ મે ૧૯૬૦", "૧ મે ૧૯૫૮", "૧ જૂન ૧૯૬૦", "૧ જૂન ૧૯૬૨"], ans: 0, topic: "History", exp: "ગુજરાત ૧ મે ૧૯૬૦ ના રોજ અલગ રાજ્ય બન્યું." },
+    { q: "વિદ્યુત પ્રવાહનો SI એકમ કયો છે?", opts: ["વૉલ્ટ", "વૉટ", "એમ્પિયર", "ઓહ્મ"], ans: 2, topic: "Science", exp: "એમ્પિયર (A) વિદ્યુત પ્રવાહનો SI એકમ છે." },
+    { q: "ભારતના પ્રથમ ગવર્નર જનરલ કોણ હતા?", opts: ["લૉર્ડ માઉન્ટબેટન", "સી. રાજગોપાલાચારી", "રાજેન્દ્ર પ્રસાદ", "સરદાર પટેલ"], ans: 1, topic: "History", exp: "ભારતના પ્રથમ ભારતીય ગવર્નર જનરલ ચક્રવર્તી રાજગોપાલાચારી હતા." },
+  ]);
+
+  // ─── File upload handler ───────────────────────────────────────
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowed.includes(file.type)) {
+      setUploadStatus("error");
+      setUploadFileName("ફક્ત PDF, JPG, PNG ફાઈલ upload કરો");
+      return;
+    }
+
+    setUploadStatus("loading");
+    setUploadFileName(file.name);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/generate-quiz', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.questions && data.questions.length > 0) {
+        // API format → QuizTab format convert
+        const converted = data.questions.map((q) => {
+          const optKeys = ['a', 'b', 'c', 'd'];
+          const opts = optKeys.map(k => q[k] || '');
+          const ans = optKeys.indexOf(q.correct_option);
+          return {
+            q: q.question,
+            opts,
+            ans: ans === -1 ? 0 : ans,
+            topic: "AI Generated",
+            exp: q.explanation || '',
+          };
+        });
+        setQuestions(converted);
+        setUploadStatus("done");
+        // Auto start quiz after 1 sec
+        setTimeout(() => startQuiz(6), 1000);
+      } else {
+        setUploadStatus("error");
+        setUploadFileName("Questions generate ना थया, फरी try कारो");
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      setUploadStatus("error");
+      setUploadFileName("Upload failed. Internet check करो.");
+    }
+
+    // Reset input so same file re-upload kari shakay
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // ✅ BUG FIX 2: Timer starts fresh every time phase becomes "quiz"
   useEffect(() => {
@@ -449,6 +512,8 @@ const QuizTab = () => {
     setAnswers([]);
     setSelected(null);
     setTimeLeft(null);
+    setUploadStatus("idle");
+    setUploadFileName("");
   };
 
   const startQuiz = (mins) => {
@@ -472,17 +537,69 @@ const QuizTab = () => {
         <h2 className="text-lg font-black text-gray-50">AI Quiz Generator</h2>
         <p className="text-sm text-gray-500 mt-0.5">Upload material or pick a preset quiz</p>
       </div>
-      <div className="border-2 border-dashed border-blue-200 rounded-2xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group bg-gradient-to-br from-slate-50 to-blue-50/20">
-        <div className="flex justify-center gap-3 mb-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-            <Icon name="upload" size={20} />
-          </div>
-          <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform" style={{ transitionDelay: "50ms" }}>
-            <Icon name="camera" size={20} />
-          </div>
-        </div>
-        <p className="text-sm font-bold text-gray-200 mb-1">Upload PDF or Photo</p>
-        <p className="text-xs text-gray-500">AI will generate smart questions instantly</p>
+      {/* ─── Hidden file input ─────────────────────────────────── */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* ─── Upload box ────────────────────────────────────────── */}
+      <div
+        onClick={() => uploadStatus !== "loading" && fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer group
+          ${uploadStatus === "loading" ? "border-amber-300 bg-amber-50/20 cursor-wait" : ""}
+          ${uploadStatus === "done"    ? "border-emerald-300 bg-emerald-50/20" : ""}
+          ${uploadStatus === "error"   ? "border-red-300 bg-red-50/20" : ""}
+          ${uploadStatus === "idle"    ? "border-blue-200 hover:border-blue-400 hover:bg-blue-50/30 bg-gradient-to-br from-slate-50 to-blue-50/20" : ""}
+        `}
+      >
+        {uploadStatus === "loading" ? (
+          <>
+            <div className="flex justify-center mb-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center animate-spin">
+                <Icon name="rotate" size={20} className="text-amber-500" />
+              </div>
+            </div>
+            <p className="text-sm font-bold text-amber-600 mb-1">AI questions બનાવી રહ્યો છે...</p>
+            <p className="text-xs text-gray-500 truncate">{uploadFileName}</p>
+          </>
+        ) : uploadStatus === "done" ? (
+          <>
+            <div className="flex justify-center mb-3">
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <Icon name="check" size={20} className="text-emerald-500" />
+              </div>
+            </div>
+            <p className="text-sm font-bold text-emerald-600 mb-1">Questions ready! Quiz starting...</p>
+            <p className="text-xs text-gray-500 truncate">{uploadFileName}</p>
+          </>
+        ) : uploadStatus === "error" ? (
+          <>
+            <div className="flex justify-center mb-3">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                <Icon name="x" size={20} className="text-red-500" />
+              </div>
+            </div>
+            <p className="text-sm font-bold text-red-500 mb-1">Error — ફરી try કરો</p>
+            <p className="text-xs text-gray-500">{uploadFileName}</p>
+          </>
+        ) : (
+          <>
+            <div className="flex justify-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                <Icon name="upload" size={20} />
+              </div>
+              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform" style={{ transitionDelay: "50ms" }}>
+                <Icon name="camera" size={20} />
+              </div>
+            </div>
+            <p className="text-sm font-bold text-gray-200 mb-1">Upload PDF or Photo</p>
+            <p className="text-xs text-gray-500">PDF અથવા Photo upload કરો → AI instant questions બનાવશે</p>
+          </>
+        )}
       </div>
 
       <SubjectPills active={subject} onChange={setSubject} />
