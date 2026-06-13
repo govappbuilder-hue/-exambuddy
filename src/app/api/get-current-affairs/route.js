@@ -7,11 +7,31 @@ const supabase = createClient(
 
 function extractJson(text) {
   if (!text) return null;
+  
+  // Try direct parse
+  try { return JSON.parse(text.trim()); } catch {}
+  
+  // Remove markdown
   let clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  
+  // Find array
   const start = clean.indexOf("[");
   const end = clean.lastIndexOf("]");
   if (start === -1 || end === -1) return null;
-  try { return JSON.parse(clean.slice(start, end + 1)); } catch { return null; }
+  
+  const slice = clean.slice(start, end + 1);
+  try { return JSON.parse(slice); } catch {}
+  
+  // Fix common issues
+  try {
+    const fixed = slice
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+    return JSON.parse(fixed);
+  } catch {}
+  
+  return null;
 }
 
 export async function GET(request) {
@@ -43,11 +63,10 @@ export async function GET(request) {
       year: "numeric", month: "long", day: "numeric"
     });
 
-    const prompt = `Generate 8 important current affairs for ${today} for GPSC/UPSC exam preparation in Gujarat.
-Return ONLY this JSON array, no other text:
-[{"title":"News headline in Gujarati","summary":"2-3 sentence explanation in Gujarati relevant for GPSC exam","category":"National","importance":"High","gujarati_keywords":["keyword1","keyword2"]}]
-Categories: National, International, Economy, Science, Sports, Gujarat
-Importance: High or Medium`;
+    const prompt = `Generate 8 current affairs news for GPSC exam. Today: ${today}.
+Respond with ONLY a JSON array. No explanation. No markdown.
+Format: [{"title":"Gujarati headline","summary":"2-3 sentences in Gujarati","category":"National","importance":"High","gujarati_keywords":["word1","word2"]}]
+Categories: National, International, Economy, Science, Sports, Gujarat`;
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
