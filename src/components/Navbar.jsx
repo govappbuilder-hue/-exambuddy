@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import ThemeToggle from './ThemeToggle';
 
 const NAV_LINKS = [
   { href: "/quiz", label: "Quiz" },
@@ -100,6 +101,7 @@ export default function Navbar() {
             )}
           </div>
         )}
+      <ThemeToggle />  
       </nav>
       <style>{`
         @media (max-width: 768px) { .desktop-nav { display: none !important; } .mobile-menu-btn { display: flex !important; } }

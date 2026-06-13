@@ -1,4 +1,17 @@
-@import "tailwindcss";
+[data-theme="light"] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] nav,
+[data-theme="light"] header {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] button {
+  color: #0f172a;
+}@import "tailwindcss";
 
 * {
   margin: 0;
