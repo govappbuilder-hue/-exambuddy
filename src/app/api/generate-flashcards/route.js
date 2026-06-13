@@ -43,7 +43,7 @@ export async function POST(request) {
 
     const subjectName = SUBJECT_NAMES[subject] || subject;
 
-    const prompt = `Generate 10 important flashcards for "${subjectName}" topic for Gujarat government exam preparation (GPSC, GSSSB, Police).
+    const prompt = `Generate 20 important flashcards for "${subjectName}" topic for Gujarat government exam preparation (GPSC, GSSSB, Police).
 Each flashcard should have a short question/term on front and a concise answer/definition on back, in Gujarati language.
 Respond with ONLY this JSON array format, nothing else:
 [{"front":"પ્રશ્ન અથવા ટર્મ","back":"જવાબ અથવા સમજૂતી"}]`;
@@ -64,7 +64,7 @@ Respond with ONLY this JSON array format, nothing else:
           { role: "user", content: prompt }
         ],
         temperature: 0.6,
-        max_tokens: 1500,
+        max_tokens: 3000,
       }),
     });
 
