@@ -17,23 +17,29 @@ export default function CurrentAffairsPage() {
   const today = new Date().toISOString().split("T")[0];
 
   const loadArticles = async (generate = false) => {
-    try {
-      const url = `/api/get-current-affairs?date=${today}${generate ? "&generate=true" : ""}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.articles?.length > 0) setArticles(data.articles);
-      return data.articles?.length > 0;
-    } catch (e) {
-      console.error(e);
-      return false;
+  try {
+    const url = `/api/get-current-affairs?date=${today}${generate ? "&generate=true" : ""}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.articles?.length > 0) {
+      setArticles(data.articles);
+      return true;
     }
-  };
+    return false;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+};
 
   const handleGenerate = async () => {
-    setGenerating(true);
-    await loadArticles(true);
-    setGenerating(false);
-  };
+  setGenerating(true);
+  const success = await loadArticles(true);
+  setGenerating(false);
+  if (!success) {
+    alert("Generate na thayु. Pachi try karo.");
+  }
+};
 
   useEffect(() => {
     loadArticles().finally(() => setLoading(false));
