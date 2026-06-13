@@ -1,344 +1,295 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
 
-const SUBJECT_NAMES = {
-  maths: '🔢 ગણિત',
-  constitution: '📜 બંધારણ',
-  history: '🏛️ ઇતિહાસ',
-  geography: '🌍 ભૂગોળ',
-  science: '🔬 વિજ્ઞાન',
-  gujarati: '✍️ ગુજરાતી',
-  computer: '💻 કમ્પ્યૂટર',
-  reasoning: '🧩 રીઝનિંગ',
-  english: '🔤 English',
-  'current-affairs': '📰 કરંટ અફેર્સ',
-  gk: '💡 સામાન્ય જ્ઞાન',
-  law: '⚖️ કાયદો',
-  economics: '📈 અર્થશાસ્ત્ર',
-};
+const EXAMS = ['GPSC Class 1-2', 'PSI', 'Talati', 'GSSSB', 'UPSC', 'Bin Sachivalay', 'Constable', 'TET', 'TAT', 'HTAT', 'Junior Clerk', 'Other'];
 
-export default function MyProgressPage() {
+export default function ProfilePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState([]);
-  const [stats, setStats] = useState({
-    total: 0, avgScore: 0, bestScore: 0,
-    totalQuestions: 0, streak: 0, thisWeek: 0,
-  });
-  const [subjectStats, setSubjectStats] = useState([]);
-  const [calendarDays, setCalendarDays] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [user, setUser] = useState(null);
+  const [name, setName] = useState('');
+  const [examTarget, setExamTarget] = useState('GPSC Class 1-2');
+  const [note, setNote] = useState('');
+  const [notes, setNotes] = useState([]);
+  const [dark, setDark] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [editName, setEditName] = useState(false);
+  const [stats] = useState({ quizzes: 0, accuracy: '0%', streak: 0, badges: 0 });
+  const [activeTab, setActiveTab] = useState('profile');
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
-
-      const { data } = await supabase
-        .from('quiz_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (!data || data.length === 0) { setLoading(false); return; }
-
-      setHistory(data);
-
-      // Overall stats
-      const total = data.length;
-      const avgScore = Math.round(data.reduce((a, b) => a + (b.score / b.total) * 100, 0) / total);
-      const bestScore = Math.max(...data.map(d => Math.round((d.score / d.total) * 100)));
-      const totalQuestions = data.reduce((a, b) => a + b.total, 0);
-
-      // This week
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const thisWeek = data.filter(d => new Date(d.created_at) > weekAgo).length;
-
-      // Streak
-      let streak = 0;
-      const uniqueDates = [...new Set(data.map(d => new Date(d.created_at).toDateString()))];
-      for (let i = 0; i < 30; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        if (uniqueDates.includes(d.toDateString())) streak++;
-        else break;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setUser(data.user);
+        setName(data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Student');
       }
+    });
+    const saved = localStorage.getItem('eb_notes');
+    if (saved) setNotes(JSON.parse(saved));
+    const savedExam = localStorage.getItem('eb_exam_target');
+    if (savedExam) setExamTarget(savedExam);
+  }, []);
 
-      setStats({ total, avgScore, bestScore, totalQuestions, streak, thisWeek });
+  const saveNote = () => {
+    if (!note.trim()) return;
+    const updated = [{ id: Date.now(), text: note, date: new Date().toLocaleDateString('gu-IN') }, ...notes];
+    setNotes(updated);
+    localStorage.setItem('eb_notes', JSON.stringify(updated));
+    setNote('');
+  };
 
-      // Subject wise stats
-      const subMap = {};
-      data.forEach(d => {
-        const key = d.subject_name || 'other';
-        if (!subMap[key]) subMap[key] = { total: 0, correct: 0, count: 0 };
-        subMap[key].total += d.total;
-        subMap[key].correct += d.score;
-        subMap[key].count++;
-      });
-      const subArr = Object.entries(subMap).map(([name, s]) => ({
-        name,
-        avg: Math.round((s.correct / s.total) * 100),
-        count: s.count,
-        total: s.total,
-        correct: s.correct,
-      })).sort((a, b) => b.avg - a.avg);
-      setSubjectStats(subArr);
+  const deleteNote = (id) => {
+    const updated = notes.filter(n => n.id !== id);
+    setNotes(updated);
+    localStorage.setItem('eb_notes', JSON.stringify(updated));
+  };
 
-      // Calendar — last 30 days
-      const dateMap = {};
-      data.forEach(d => {
-        const key = new Date(d.created_at).toDateString();
-        if (!dateMap[key]) dateMap[key] = [];
-        dateMap[key].push(Math.round((d.score / d.total) * 100));
-      });
-      const days = [];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const key = d.toDateString();
-        const scores = dateMap[key] || [];
-        days.push({
-          date: d.getDate(),
-          day: d.toLocaleDateString('en', { weekday: 'short' }),
-          active: scores.length > 0,
-          avg: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
-          count: scores.length,
-        });
-      }
-      setCalendarDays(days);
-      setLoading(false);
-    };
-    fetchData();
-  }, [router]);
+  const saveExamTarget = (val) => {
+    setExamTarget(val);
+    localStorage.setItem('eb_exam_target', val);
+  };
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#38bdf8', fontSize: '20px', fontWeight: '700' }}>⏳ લોડ થઈ રહ્યું છે...</div>
-    </div>
-  );
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
-  if (history.length === 0) return (
-    <div style={{ minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px', fontFamily: 'system-ui' }}>
-      <div style={{ fontSize: '64px' }}>📊</div>
-      <h2 style={{ color: 'white', fontSize: '22px', fontWeight: '800', textAlign: 'center' }}>હજી કોઈ ટેસ્ટ આપ્યો નથી!</h2>
-      <p style={{ color: '#64748b', textAlign: 'center', fontSize: '14px' }}>Quiz આપો અને progress અહીં દેખાશે</p>
-      <button onClick={() => router.push('/')}
-        style={{ padding: '14px 28px', background: 'linear-gradient(135deg,#667eea,#764ba2)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '15px', cursor: 'pointer' }}>
-        🚀 Quiz શરૂ કરો
-      </button>
-    </div>
-  );
+  const avatar = name?.charAt(0)?.toUpperCase() || 'S';
+
+  const tabs = [
+    { id: 'profile', label: '👤 Profile' },
+    { id: 'notes', label: '📝 Notes' },
+    { id: 'settings', label: '⚙️ Settings' },
+    { id: 'premium', label: '👑 Premium' },
+  ];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#030712', fontFamily: 'system-ui', color: 'white', paddingBottom: '30px' }}>
+    <div style={{ minHeight: '100vh', background: '#f0f4ff', fontFamily: 'Inter, system-ui', paddingBottom: '90px' }}>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#312e81)', padding: '20px 16px', borderBottom: '1px solid #312e81' }}>
-        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => router.push('/')}
-            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>
-            ← Home
-          </button>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '900' }}>📊 My Progress</h1>
-            <p style={{ margin: '2px 0 0', color: '#a5b4fc', fontSize: '13px' }}>
-              કુલ {stats.total} ટેસ્ટ • {stats.totalQuestions} સવાલ
-            </p>
+      <div style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', padding: '24px 16px 20px', color: 'white' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '20px',
+            background: 'rgba(255,255,255,0.2)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            fontSize: '28px', fontWeight: '800', border: '3px solid rgba(255,255,255,0.4)'
+          }}>{avatar}</div>
+          <div style={{ flex: 1 }}>
+            {editName ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  style={{ background: 'rgba(255,255,255,0.2)', border: '1.5px solid rgba(255,255,255,0.5)', borderRadius: '8px', padding: '6px 10px', color: 'white', fontSize: '15px', fontWeight: '700', outline: 'none', flex: 1 }}
+                />
+                <button onClick={() => setEditName(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', padding: '6px 12px', color: 'white', fontWeight: '700', cursor: 'pointer' }}>✓</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ fontSize: '18px', fontWeight: '800' }}>{name}</div>
+                <button onClick={() => setEditName(true)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '6px', padding: '3px 8px', color: 'white', fontSize: '11px', cursor: 'pointer' }}>✏️ Edit</button>
+              </div>
+            )}
+            <div style={{ fontSize: '12px', opacity: 0.85, marginTop: '4px' }}>{user?.email}</div>
+            <div style={{ display: 'inline-block', background: isPremium ? '#f59e0b' : 'rgba(255,255,255,0.2)', borderRadius: '8px', padding: '3px 10px', fontSize: '11px', fontWeight: '700', marginTop: '6px' }}>
+              {isPremium ? '👑 Premium' : '🆓 Free Plan'}
+            </div>
           </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginTop: '16px' }}>
+          {[
+            { label: 'Quizzes', value: stats.quizzes },
+            { label: 'Accuracy', value: stats.accuracy },
+            { label: 'Streak', value: `${stats.streak}🔥` },
+            { label: 'Badges', value: stats.badges },
+          ].map((s, i) => (
+            <div key={i} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '10px', padding: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', fontWeight: '800' }}>{s.value}</div>
+              <div style={{ fontSize: '10px', opacity: 0.8 }}>{s.label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div style={{ maxWidth: '700px', margin: '0 auto', padding: '20px 16px' }}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', background: 'white', borderBottom: '1px solid #e2e8f0', overflowX: 'auto' }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+            flex: 1, padding: '12px 8px', border: 'none', background: 'none',
+            fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap',
+            color: activeTab === t.id ? '#6366f1' : '#94a3b8',
+            borderBottom: activeTab === t.id ? '2px solid #6366f1' : '2px solid transparent',
+          }}>{t.label}</button>
+        ))}
+      </div>
 
-        {/* Top Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
-          {[
-            { icon: '🎯', label: 'સરેરાશ', value: `${stats.avgScore}%`, color: stats.avgScore >= 60 ? '#10b981' : '#f59e0b' },
-            { icon: '🏆', label: 'બેસ્ટ', value: `${stats.bestScore}%`, color: '#f59e0b' },
-            { icon: '🔥', label: 'Streak', value: `${stats.streak} દિવસ`, color: '#ef4444' },
-            { icon: '📝', label: 'ટેસ્ટ', value: stats.total, color: '#3b82f6' },
-            { icon: '❓', label: 'સવાલ', value: stats.totalQuestions, color: '#8b5cf6' },
-            { icon: '📅', label: 'આ Week', value: stats.thisWeek, color: '#06b6d4' },
-          ].map(s => (
-            <div key={s.label} style={{ background: '#0f172a', borderRadius: '16px', padding: '16px', textAlign: 'center', border: '1px solid #1e293b' }}>
-              <div style={{ fontSize: '24px', marginBottom: '4px' }}>{s.icon}</div>
-              <div style={{ fontSize: '20px', fontWeight: '900', color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+      <div style={{ padding: '16px', maxWidth: '640px', margin: '0 auto' }}>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          {[
-            { key: 'overview', label: '📈 Overview' },
-            { key: 'subjects', label: '📚 Subjects' },
-            { key: 'history', label: '📜 History' },
-          ].map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)}
-              style={{ flex: 1, padding: '11px', borderRadius: '12px', border: 'none', background: activeTab === t.key ? 'linear-gradient(135deg,#667eea,#764ba2)' : '#0f172a', color: activeTab === t.key ? 'white' : '#64748b', fontWeight: '800', cursor: 'pointer', fontSize: '13px', border: activeTab === t.key ? 'none' : '1px solid #1e293b' }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* TAB: OVERVIEW */}
-        {activeTab === 'overview' && (
+        {/* PROFILE TAB */}
+        {activeTab === 'profile' && (
           <div>
-            {/* Activity Calendar */}
-            <div style={{ background: '#0f172a', borderRadius: '20px', padding: '20px', marginBottom: '20px', border: '1px solid #1e293b' }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '800', color: '#e2e8f0' }}>
-                📅 છેલ્લા 30 દિવસ
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: '5px' }}>
-                {calendarDays.map((day, i) => (
-                  <div key={i}
-                    title={day.active ? `${day.day} ${day.date}: ${day.count} tests, avg ${day.avg}%` : `${day.day} ${day.date}: no activity`}
-                    style={{
-                      aspectRatio: '1', borderRadius: '6px',
-                      background: day.active
-                        ? day.avg >= 80 ? '#065f46'
-                          : day.avg >= 60 ? '#047857'
-                          : day.avg >= 40 ? '#059669'
-                          : '#10b981'
-                        : '#1e293b',
-                      border: day.active ? '1px solid #10b98140' : '1px solid #334155',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '9px', color: day.active ? '#6ee7b7' : '#475569',
-                      fontWeight: '700', cursor: 'default',
-                    }}>
-                    {day.date}
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '12px', justifyContent: 'flex-end' }}>
-                {[
-                  { color: '#1e293b', label: 'No activity' },
-                  { color: '#10b981', label: '< 60%' },
-                  { color: '#047857', label: '60-80%' },
-                  { color: '#065f46', label: '> 80%' },
-                ].map(l => (
-                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: l.color }} />
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>{l.label}</span>
-                  </div>
+            {/* Exam Target */}
+            <div style={{ background: 'white', borderRadius: '16px', padding: '16px', marginBottom: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>🎯 Exam Target</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {EXAMS.map(e => (
+                  <button key={e} onClick={() => saveExamTarget(e)} style={{
+                    padding: '10px', borderRadius: '10px', border: '2px solid',
+                    borderColor: examTarget === e ? '#6366f1' : '#e2e8f0',
+                    background: examTarget === e ? '#ede9fe' : 'white',
+                    color: examTarget === e ? '#6366f1' : '#64748b',
+                    fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+                  }}>{e}</button>
                 ))}
               </div>
             </div>
 
-            {/* Score Trend - simple bar chart */}
-            <div style={{ background: '#0f172a', borderRadius: '20px', padding: '20px', border: '1px solid #1e293b' }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '800', color: '#e2e8f0' }}>
-                📈 છેલ્લા 10 ટેસ્ટ
-              </h3>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', height: '120px' }}>
-                {history.slice(0, 10).reverse().map((item, i) => {
-                  const pct = Math.round((item.score / item.total) * 100);
-                  return (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
-                      <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '700' }}>{pct}%</div>
-                      <div style={{
-                        width: '100%', borderRadius: '6px 6px 0 0',
-                        height: `${pct}%`,
-                        background: pct >= 80 ? 'linear-gradient(180deg,#10b981,#059669)'
-                          : pct >= 60 ? 'linear-gradient(180deg,#3b82f6,#2563eb)'
-                          : pct >= 40 ? 'linear-gradient(180deg,#f59e0b,#d97706)'
-                          : 'linear-gradient(180deg,#ef4444,#dc2626)',
-                        minHeight: '4px',
-                      }} />
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#475569' }}>જૂનો</span>
-                <span style={{ fontSize: '11px', color: '#475569' }}>નવો</span>
-              </div>
+            {/* Weakness Analytics */}
+            <div style={{ background: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>📊 Weakness Analytics</div>
+              {[
+                { subject: 'Modern History', pct: 45, color: '#ef4444', label: 'Needs Work' },
+                { subject: 'Geography – Maps', pct: 58, color: '#f59e0b', label: 'Average' },
+                { subject: 'Economics Basics', pct: 63, color: '#f59e0b', label: 'Average' },
+                { subject: 'Science & Tech', pct: 81, color: '#10b981', label: 'Good' },
+              ].map((w, i) => (
+                <div key={i} style={{ marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>{w.subject}</span>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: w.color, background: `${w.color}15`, padding: '2px 8px', borderRadius: '6px' }}>{w.label}</span>
+                  </div>
+                  <div style={{ background: '#f1f5f9', borderRadius: '10px', height: '6px' }}>
+                    <div style={{ width: `${w.pct}%`, background: w.color, height: '100%', borderRadius: '10px' }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* TAB: SUBJECTS */}
-        {activeTab === 'subjects' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {subjectStats.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                હજી data નથી
-              </div>
-            ) : subjectStats.map((s, i) => (
-              <div key={i} style={{ background: '#0f172a', borderRadius: '16px', padding: '16px 18px', border: '1px solid #1e293b' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <div>
-                    <div style={{ fontWeight: '800', fontSize: '15px', color: '#e2e8f0' }}>{s.name}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                      {s.count} ટેસ્ટ • {s.correct}/{s.total} સાચા
-                    </div>
-                  </div>
-                  <div style={{
-                    background: s.avg >= 80 ? '#065f46' : s.avg >= 60 ? '#1e3a5f' : s.avg >= 40 ? '#431407' : '#450a0a',
-                    color: s.avg >= 80 ? '#6ee7b7' : s.avg >= 60 ? '#93c5fd' : s.avg >= 40 ? '#fdba74' : '#fca5a5',
-                    padding: '6px 14px', borderRadius: '20px', fontWeight: '900', fontSize: '16px',
-                  }}>
-                    {s.avg}%
-                  </div>
+        {/* NOTES TAB */}
+        {activeTab === 'notes' && (
+          <div>
+            <div style={{ background: 'white', borderRadius: '16px', padding: '16px', marginBottom: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>📝 Personal Notes</div>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Note lakhoo..."
+                rows={3}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '13px', resize: 'none', outline: 'none', fontFamily: 'Inter, system-ui', boxSizing: 'border-box' }}
+              />
+              <button onClick={saveNote} style={{ marginTop: '8px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', width: '100%' }}>
+                Save Note
+              </button>
+            </div>
+            {notes.length === 0 && (
+              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '20px' }}>Koi note nathi — upar thi add karo!</div>
+            )}
+            {notes.map(n => (
+              <div key={n.id} style={{ background: 'white', borderRadius: '14px', padding: '14px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', color: '#1e293b', lineHeight: 1.5 }}>{n.text}</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>{n.date}</div>
                 </div>
-                <div style={{ height: '8px', background: '#1e293b', borderRadius: '4px' }}>
-                  <div style={{
-                    height: '100%', borderRadius: '4px', transition: 'width 0.5s',
-                    width: `${s.avg}%`,
-                    background: s.avg >= 80 ? 'linear-gradient(90deg,#10b981,#059669)'
-                      : s.avg >= 60 ? 'linear-gradient(90deg,#3b82f6,#2563eb)'
-                      : s.avg >= 40 ? 'linear-gradient(90deg,#f59e0b,#d97706)'
-                      : 'linear-gradient(90deg,#ef4444,#dc2626)',
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                  <span style={{ fontSize: '11px', color: '#475569' }}>
-                    {s.avg >= 80 ? '🏆 Excellent' : s.avg >= 60 ? '👍 Good' : s.avg >= 40 ? '📚 Average' : '💪 Needs Work'}
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#475569' }}>
-                    Rank: #{i + 1}
-                  </span>
-                </div>
+                <button onClick={() => deleteNote(n.id)} style={{ background: '#fee2e2', border: 'none', borderRadius: '8px', padding: '6px 10px', color: '#ef4444', cursor: 'pointer', fontSize: '14px', flexShrink: 0 }}>🗑️</button>
               </div>
             ))}
           </div>
         )}
 
-        {/* TAB: HISTORY */}
-        {activeTab === 'history' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {history.map((item, i) => {
-              const pct = Math.round((item.score / item.total) * 100);
-              const date = new Date(item.created_at);
-              return (
-                <div key={i} style={{ background: '#0f172a', borderRadius: '14px', padding: '14px 16px', border: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '700', color: '#e2e8f0', fontSize: '14px' }}>
-                      {item.subject_name || 'Quiz'}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#475569', marginTop: '3px' }}>
-                      {date.toLocaleDateString('gu-IN')} • {date.toLocaleTimeString('gu-IN', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      background: pct >= 60 ? '#064e3b' : '#450a0a',
-                      color: pct >= 60 ? '#34d399' : '#f87171',
-                      padding: '5px 12px', borderRadius: '20px', fontWeight: '800', fontSize: '14px',
+        {/* SETTINGS TAB */}
+        {activeTab === 'settings' && (
+          <div>
+            <div style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              {[
+                {
+                  icon: '🌙', label: 'Dark Mode', sub: 'Theme toggle',
+                  right: (
+                    <button onClick={() => setDark(!dark)} style={{
+                      width: '44px', height: '24px', borderRadius: '12px', border: 'none',
+                      background: dark ? '#6366f1' : '#e2e8f0', cursor: 'pointer', position: 'relative', transition: 'background 0.2s'
                     }}>
-                      {item.score}/{item.total}
-                    </div>
-                    <div style={{ fontSize: '12px', marginTop: '3px', color: pct >= 60 ? '#10b981' : '#ef4444', fontWeight: '700' }}>
-                      {pct}%
-                    </div>
+                      <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: dark ? '23px' : '3px', transition: 'left 0.2s' }} />
+                    </button>
+                  )
+                },
+                { icon: '🔔', label: 'Notifications', sub: 'Exam reminders', right: <span style={{ color: '#94a3b8', fontSize: '18px' }}>›</span> },
+                { icon: '🔒', label: 'Change Password', sub: 'Security settings', right: <span style={{ color: '#94a3b8', fontSize: '18px' }}>›</span> },
+                { icon: '📱', label: 'App Version', sub: 'v1.0.0', right: <span style={{ color: '#94a3b8', fontSize: '12px' }}>Latest</span> },
+              ].map((item, i, arr) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderBottom: i < arr.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                  <div style={{ width: '38px', height: '38px', background: '#f0f4ff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{item.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{item.label}</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{item.sub}</div>
                   </div>
+                  {item.right}
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            <button onClick={handleLogout} style={{
+              marginTop: '16px', width: '100%', background: '#fee2e2', color: '#ef4444',
+              border: 'none', borderRadius: '14px', padding: '14px', fontSize: '14px',
+              fontWeight: '800', cursor: 'pointer'
+            }}>🚪 Logout</button>
+          </div>
+        )}
+
+        {/* PREMIUM TAB */}
+        {activeTab === 'premium' && (
+          <div>
+            {/* Current Plan */}
+            <div style={{ background: isPremium ? 'linear-gradient(135deg,#f59e0b,#ef4444)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: '20px', padding: '20px', color: 'white', marginBottom: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>{isPremium ? '👑' : '🆓'}</div>
+              <div style={{ fontSize: '18px', fontWeight: '800' }}>{isPremium ? 'Premium Plan' : 'Free Plan'}</div>
+              <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>{isPremium ? 'Badhi features unlock che!' : 'Upgrade karo — badhu unlock karo!'}</div>
+            </div>
+
+            {/* Plans */}
+            {[
+              {
+                name: 'Free', price: '₹0', period: 'forever', color: '#64748b',
+                features: ['5 quizzes per day', '10 flashcards', 'Basic doubt solver', 'Current affairs (limited)'],
+                current: !isPremium
+              },
+              {
+                name: 'Premium', price: '₹199', period: '/month', color: '#6366f1',
+                features: ['Unlimited quizzes', 'All flashcards', 'AI doubt solver (unlimited)', 'Full current affairs', 'Mock tests (all patterns)', 'Leaderboard + Badges', 'PDF Marketplace access', 'Priority support'],
+                current: isPremium
+              },
+            ].map((plan, i) => (
+              <div key={i} style={{
+                background: 'white', borderRadius: '16px', padding: '16px', marginBottom: '12px',
+                border: `2px solid ${plan.current ? plan.color : '#e2e8f0'}`,
+                boxShadow: plan.current ? `0 4px 16px ${plan.color}25` : '0 2px 8px rgba(0,0,0,0.06)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>{plan.name}</div>
+                    <div style={{ fontSize: '20px', fontWeight: '800', color: plan.color }}>{plan.price}<span style={{ fontSize: '12px', fontWeight: '400', color: '#94a3b8' }}>{plan.period}</span></div>
+                  </div>
+                  {plan.current && <div style={{ background: `${plan.color}15`, color: plan.color, fontSize: '12px', fontWeight: '700', padding: '4px 12px', borderRadius: '10px' }}>Current</div>}
+                </div>
+                {plan.features.map((f, j) => (
+                  <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px', color: '#64748b' }}>
+                    <span style={{ color: plan.color }}>✓</span> {f}
+                  </div>
+                ))}
+                {!plan.current && (
+                  <button onClick={() => setIsPremium(true)} style={{
+                    marginTop: '14px', width: '100%', background: `linear-gradient(135deg, ${plan.color}, #8b5cf6)`,
+                    color: 'white', border: 'none', borderRadius: '12px', padding: '12px',
+                    fontSize: '14px', fontWeight: '800', cursor: 'pointer'
+                  }}>🚀 Upgrade to Premium</button>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
