@@ -23,12 +23,13 @@ const SUBJECTS = [
 
 export default function FlashcardsPage() {
   const router = useRouter();
-  const [screen, setScreen] = useState('select'); // select | loading | cards
+  const [screen, setScreen] = useState('select');
   const [subject, setSubject] = useState(null);
   const [cards, setCards] = useState([]);
   const [current, setCurrent] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState({});
+  const [animating, setAnimating] = useState(false);
 
   const startFlashcards = async (sub) => {
     setSubject(sub);
@@ -38,7 +39,6 @@ export default function FlashcardsPage() {
     setKnown({});
 
     try {
-      // Try cached first
       const cachedRes = await fetch(`/api/generate-flashcards?subject=${sub.key}`);
       const cachedData = await cachedRes.json();
 
@@ -48,7 +48,6 @@ export default function FlashcardsPage() {
         return;
       }
 
-      // Generate new
       const res = await fetch('/api/generate-flashcards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,20 +68,40 @@ export default function FlashcardsPage() {
     }
   };
 
-  const handleNext = (mark) => {
+  // FIX: Pehla flip reset karo, pachhi next card
+  const goToNext = (mark) => {
+    if (animating) return;
     if (mark) setKnown(p => ({ ...p, [current]: mark }));
-    setFlipped(false);
+    
     if (current + 1 < cards.length) {
-      setTimeout(() => setCurrent(c => c + 1), 150);
+      setAnimating(true);
+      setFlipped(false);
+      setTimeout(() => {
+        setCurrent(c => c + 1);
+        setAnimating(false);
+      }, 250);
+    } else {
+      // Last card - mark karo ane done screen
+      if (mark) setKnown(p => ({ ...p, [current]: mark }));
     }
+  };
+
+  const goPrev = () => {
+    if (animating || current === 0) return;
+    setAnimating(true);
+    setFlipped(false);
+    setTimeout(() => {
+      setCurrent(c => c - 1);
+      setAnimating(false);
+    }, 250);
   };
 
   const knownCount = Object.values(known).filter(v => v === 'known').length;
   const reviewCount = Object.values(known).filter(v => v === 'review').length;
   const isLastCard = current === cards.length - 1;
-  const allDone = Object.keys(known).length === cards.length && cards.length > 0;
+  const allDone = isLastCard && Object.keys(known).length === cards.length && cards.length > 0;
 
-  /* ── SELECT SCREEN ── */
+  /* SELECT */
   if (screen === 'select') return (
     <div style={{ minHeight: '100vh', background: '#0f172a', fontFamily: 'system-ui', color: 'white', padding: '20px', paddingBottom: '90px' }}>
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
@@ -96,7 +115,6 @@ export default function FlashcardsPage() {
             <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>Subject pasand karo - AI 10 cards banavshe</p>
           </div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
           {SUBJECTS.map(s => (
             <button key={s.key} onClick={() => startFlashcards(s)}
@@ -111,7 +129,7 @@ export default function FlashcardsPage() {
     </div>
   );
 
-  /* ── LOADING SCREEN ── */
+  /* LOADING */
   if (screen === 'loading') return (
     <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
       <div style={{ textAlign: 'center', color: 'white' }}>
@@ -126,10 +144,11 @@ export default function FlashcardsPage() {
     </div>
   );
 
-  /* ── CARDS SCREEN ── */
+  /* CARDS */
   if (screen === 'cards') {
     const card = cards[current];
 
+    // All done screen
     if (allDone) return (
       <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', padding: '20px' }}>
         <div style={{ background: '#1e293b', borderRadius: '24px', padding: '36px', maxWidth: '400px', width: '100%', textAlign: 'center', border: '1px solid #334155' }}>
@@ -170,21 +189,25 @@ export default function FlashcardsPage() {
           <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>{current + 1} / {cards.length}</div>
         </div>
 
-        {/* Progress */}
+        {/* Progress Bar */}
         <div style={{ height: '3px', background: '#334155' }}>
           <div style={{ height: '100%', background: 'linear-gradient(90deg,#6366f1,#0ea5e9)', width: `${((current + 1) / cards.length) * 100}%`, transition: 'width 0.3s' }} />
         </div>
 
-        {/* Card Area */}
+        {/* Card */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div onClick={() => setFlipped(f => !f)}
+          <div
+            onClick={() => !animating && setFlipped(f => !f)}
             style={{
               width: '100%', maxWidth: '440px', minHeight: '260px',
               background: flipped ? 'linear-gradient(135deg,#0ea5e9,#6366f1)' : 'linear-gradient(135deg,#1e293b,#334155)',
               borderRadius: '24px', padding: '32px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', border: '1px solid #475569', textAlign: 'center',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.3)', transition: 'background 0.3s',
+              cursor: animating ? 'default' : 'pointer',
+              border: '1px solid #475569', textAlign: 'center',
+              opacity: animating ? 0 : 1,
+              transform: animating ? 'scale(0.95)' : 'scale(1)',
+              transition: 'opacity 0.2s, transform 0.2s, background 0.3s',
             }}>
             <div style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '2px', color: flipped ? 'rgba(255,255,255,0.7)' : '#818cf8', marginBottom: '16px', textTransform: 'uppercase' }}>
               {flipped ? '💡 જવાબ' : '❓ પ્રશ્ન'}
@@ -203,28 +226,37 @@ export default function FlashcardsPage() {
           <div style={{ maxWidth: '440px', margin: '0 auto' }}>
             {flipped ? (
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => handleNext('review')}
-                  style={{ flex: 1, padding: '14px', background: '#1c1a00', border: '2px solid #ca8a04', borderRadius: '12px', color: '#fbbf24', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
+                <button onClick={() => goToNext('review')} disabled={animating}
+                  style={{ flex: 1, padding: '14px', background: '#1c1a00', border: '2px solid #ca8a04', borderRadius: '12px', color: '#fbbf24', fontWeight: '800', cursor: 'pointer', fontSize: '14px', opacity: animating ? 0.5 : 1 }}>
                   🔁 Revise Karu
                 </button>
-                <button onClick={() => handleNext('known')}
-                  style={{ flex: 1, padding: '14px', background: '#064e3b', border: '2px solid #10b981', borderRadius: '12px', color: '#34d399', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
+                <button onClick={() => goToNext('known')} disabled={animating}
+                  style={{ flex: 1, padding: '14px', background: '#064e3b', border: '2px solid #10b981', borderRadius: '12px', color: '#34d399', fontWeight: '800', cursor: 'pointer', fontSize: '14px', opacity: animating ? 0.5 : 1 }}>
                   ✅ Aavde Che
                 </button>
               </div>
             ) : (
-              <button onClick={() => setFlipped(true)}
+              <button onClick={() => setFlipped(true)} disabled={animating}
                 style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#6366f1,#0ea5e9)', border: 'none', borderRadius: '12px', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}>
                 👁️ જવાબ જુઓ
               </button>
             )}
 
-            {!isLastCard && (
-              <button onClick={() => { setFlipped(false); setCurrent(c => c + 1); }}
-                style={{ width: '100%', marginTop: '8px', padding: '10px', background: 'transparent', border: '1px solid #334155', borderRadius: '10px', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}>
-                ⏭ Skip →
-              </button>
-            )}
+            {/* Prev / Skip row */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              {current > 0 && (
+                <button onClick={goPrev} disabled={animating}
+                  style={{ flex: 1, padding: '10px', background: 'transparent', border: '1px solid #334155', borderRadius: '10px', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}>
+                  ← Prev
+                </button>
+              )}
+              {!isLastCard && (
+                <button onClick={() => goToNext(null)} disabled={animating}
+                  style={{ flex: 1, padding: '10px', background: 'transparent', border: '1px solid #334155', borderRadius: '10px', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}>
+                  Skip →
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

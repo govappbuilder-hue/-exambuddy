@@ -1,5 +1,5 @@
 import "./globals.css";
-import React from "react";
+import BottomNav from "../components/BottomNav";
 
 export const metadata = {
   title: "ExamBuddy - Gujarat Govt Exam | GPSC, PSI, Talati, GSSSB",
@@ -13,7 +13,7 @@ export const viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }) {
   return (
     <html lang="gu">
       <head>
@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
+        <BottomNav />
       </body>
     </html>
   );
