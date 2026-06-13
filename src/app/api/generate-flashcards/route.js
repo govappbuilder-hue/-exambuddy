@@ -36,7 +36,7 @@ export async function POST(request) {
       return Response.json({ error: "Subject required" }, { status: 400 });
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return Response.json({ error: "API key missing" }, { status: 500 });
     }
