@@ -85,8 +85,13 @@ Categories: National, International, Economy, Science, Sports, Gujarat`;
     const articles = extractJson(text);
 
     if (!articles || articles.length === 0) {
-      return Response.json({ articles: [], source: "empty", error: "Parse failed" });
-    }
+  return Response.json({ 
+    articles: [], 
+    source: "empty", 
+    error: "Parse failed",
+    raw: text.substring(0, 500)  // aa line add karo
+  });
+}
 
     // Save to Supabase
     await supabase.from("daily_current_affairs").upsert({
