@@ -57,6 +57,33 @@ export default function QuizPage({ params }: PageProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  // ── BOOKMARK STATE ──
+  const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // ── GET USER ID ON MOUNT ──
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id);
+    });
+  }, []);
+
+  // ── TOGGLE BOOKMARK ──
+  const toggleBookmark = async (questionId: string) => {
+    if (!userId) return;
+    if (bookmarked.has(questionId)) {
+      await supabase.from('bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('question_id', questionId);
+      setBookmarked(p => { const n = new Set(p); n.delete(questionId); return n; });
+    } else {
+      await supabase.from('bookmarks')
+        .insert({ user_id: userId, question_id: questionId });
+      setBookmarked(p => new Set(p).add(questionId));
+    }
+  };
+
   const startQuiz = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -155,7 +182,6 @@ export default function QuizPage({ params }: PageProps) {
           ))}
         </div>
 
-
         {/* Negative Marking Toggle */}
         <div onClick={() => setNegativeMarking((p: boolean) => !p)}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '12px', border: `2px solid ${negativeMarking ? '#ef4444' : '#e5e7eb'}`, background: negativeMarking ? '#fef2f2' : '#f8fafc', cursor: 'pointer', marginBottom: '16px', transition: 'all 0.2s' }}>
@@ -206,9 +232,18 @@ export default function QuizPage({ params }: PageProps) {
 
         <div style={{ maxWidth: '640px', margin: '0 auto', padding: '18px 16px' }}>
           <div style={{ background: '#1e293b', borderRadius: '14px', padding: '20px', marginBottom: '14px', border: '1px solid #334155' }}>
-            <div style={{ fontSize: '11px', color: '#818cf8', fontWeight: '700', letterSpacing: '1px', marginBottom: '10px', textTransform: 'uppercase' }}>
-              {subject.toUpperCase()} • QUESTION {current + 1}
+
+            {/* ── SUBJECT LABEL + BOOKMARK BUTTON ── */}
+            <div style={{ fontSize: '11px', color: '#818cf8', fontWeight: '700', letterSpacing: '1px', marginBottom: '10px', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{subject.toUpperCase()} • QUESTION {current + 1}</span>
+              <button
+                onClick={() => toggleBookmark(q.id)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '2px 0', lineHeight: 1 }}
+              >
+                {bookmarked.has(q.id) ? '❤️' : '🤍'}
+              </button>
             </div>
+
             <p style={{ fontSize: '16px', fontWeight: '600', margin: 0, lineHeight: 1.7, color: 'white' }}>{q.question}</p>
           </div>
 
