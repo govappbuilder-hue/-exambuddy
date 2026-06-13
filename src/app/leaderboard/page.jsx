@@ -212,7 +212,7 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        {/* Motivational footer */}
+       {/* Motivational footer */}
         <div style={{ textAlign: 'center', marginTop: '28px', padding: '20px', background: '#0f172a', borderRadius: '16px', border: '1px solid #1e293b' }}>
           <div style={{ fontSize: '20px', marginBottom: '8px' }}>💪</div>
           <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6' }}>
@@ -222,24 +222,6 @@ export default function LeaderboardPage() {
         </div>
 
       </div>
-
-      {/* Bottom nav */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#0d1117', borderTop: '1px solid #1e293b', display: 'flex', justifyContent: 'space-around', padding: '10px 0' }}>
-        {[
-          { icon: '🏠', label: 'Home', path: '/dashboard' },
-          { icon: '📰', label: 'Affairs', path: '/current-affairs' },
-          { icon: '🎓', label: 'Mock', path: '/mock-test' },
-          { icon: '🏆', label: 'Rank', path: '/leaderboard', active: true },
-          { icon: '👤', label: 'Profile', path: '/my-progress' },
-        ].map(tab => (
-          <button key={tab.path} onClick={() => router.push(tab.path)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-            <span style={{ fontSize: '20px' }}>{tab.icon}</span>
-            <span style={{ fontSize: '10px', color: tab.active ? '#6366f1' : '#475569', fontWeight: tab.active ? '700' : '400' }}>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
     </div>
   );
 }
