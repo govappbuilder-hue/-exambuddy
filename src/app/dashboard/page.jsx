@@ -178,7 +178,7 @@ export default function DashboardPage() {
                 value={examName}
                 onChange={e => setExamName(e.target.value)}
                 placeholder="Exam name (e.g. GPSC Class 1-2)"
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none', marginBottom: '8px', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none', marginBottom: '8px', boxSizing: 'border-box', color: '#1e293b', background: 'white' }}
               />
               <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>📅 Exam date select karo:</div>
               <input
@@ -186,7 +186,7 @@ export default function DashboardPage() {
                 value={examDate}
                 min={today}
                 onChange={e => setExamDate(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', cursor: 'pointer' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', cursor: 'pointer', color: '#1e293b', background: 'white' }}
               />
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={addExam} disabled={!examName.trim() || !examDate} style={{ flex: 1, background: examName.trim() && examDate ? '#6366f1' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '13px', fontWeight: '700', cursor: examName.trim() && examDate ? 'pointer' : 'not-allowed' }}>
