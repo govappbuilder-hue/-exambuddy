@@ -1,6 +1,7 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useTheme } from '../context/ThemeContext';
 
 const tabs = [
   { href: '/', icon: '🏠', label: 'Home' },
@@ -12,12 +13,16 @@ const tabs = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { dark } = useTheme();
 
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: 'white', borderTop: '1px solid #e2e8f0',
-      display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom)'
+      background: dark ? '#1a1a24' : '#ffffff',
+      borderTop: `1px solid ${dark ? '#2d3748' : '#e2e8f0'}`,
+      display: 'flex', zIndex: 100,
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      transition: 'background 0.3s ease',
     }}>
       {tabs.map((tab) => {
         const active = pathname === tab.href;
@@ -26,7 +31,7 @@ export default function BottomNav() {
             flex: 1, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
             padding: '8px 4px', textDecoration: 'none',
-            color: active ? '#6366f1' : '#94a3b8',
+            color: active ? '#6366f1' : (dark ? '#64748b' : '#94a3b8'),
             borderTop: active ? '2px solid #6366f1' : '2px solid transparent',
           }}>
             <span style={{ fontSize: '20px' }}>{tab.icon}</span>
@@ -39,5 +44,3 @@ export default function BottomNav() {
     </nav>
   );
 }
-
-

@@ -1,17 +1,4 @@
-[data-theme="light"] {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
-}
-
-[data-theme="light"] nav,
-[data-theme="light"] header {
-  background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-}
-
-[data-theme="light"] button {
-  color: #0f172a;
-}@import "tailwindcss";
+@import "tailwindcss";
 
 * {
   margin: 0;
@@ -24,32 +11,121 @@ html, body {
   overflow-x: hidden;
 }
 
+/* ===== DEFAULT = DARK MODE ===== */
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: #0f0f13;
   color: #f1f5f9;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-html {
-  scroll-behavior: smooth;
+/* ===== LIGHT MODE — html par data-theme="light" lagashe ===== */
+/* Inline styles ne override karva mate !important jaruri che */
+
+html[data-theme="light"] body {
+  background-color: #f0f4ff !important;
+  color: #0f172a !important;
 }
 
+/* Badhaj divs jo dark background rakhe che — light ma override */
+html[data-theme="light"] div[style*="background: #0f0f13"],
+html[data-theme="light"] div[style*="background:#0f0f13"],
+html[data-theme="light"] div[style*="background-color: #0f0f13"],
+html[data-theme="light"] div[style*="background: rgb(15, 15, 19)"] {
+  background-color: #f0f4ff !important;
+}
+
+html[data-theme="light"] div[style*="background: #1a1a24"],
+html[data-theme="light"] div[style*="background:#1a1a24"],
+html[data-theme="light"] div[style*="background: #0f172a"],
+html[data-theme="light"] div[style*="background:#0f172a"],
+html[data-theme="light"] div[style*="background: #1e293b"],
+html[data-theme="light"] div[style*="background:#1e293b"],
+html[data-theme="light"] div[style*="background: #111827"],
+html[data-theme="light"] div[style*="background:#111827"] {
+  background-color: #ffffff !important;
+}
+
+/* Main page wrapper — minHeight:100vh */
+html[data-theme="light"] div[style*="minHeight: '100vh'"],
+html[data-theme="light"] div[style*="min-height: 100vh"] {
+  background-color: #f0f4ff !important;
+}
+
+/* Cards */
+html[data-theme="light"] div[style*="background: #16213e"],
+html[data-theme="light"] div[style*="background: #1a1a2e"],
+html[data-theme="light"] div[style*="background: #252540"],
+html[data-theme="light"] div[style*="background: #1c1c2e"] {
+  background-color: #ffffff !important;
+}
+
+/* Text colors — dark ma light text hoy to light mode ma dark karvo */
+html[data-theme="light"] p[style*="color: #94a3b8"],
+html[data-theme="light"] span[style*="color: #94a3b8"],
+html[data-theme="light"] div[style*="color: #94a3b8"] {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] p[style*="color: #f1f5f9"],
+html[data-theme="light"] span[style*="color: #f1f5f9"],
+html[data-theme="light"] div[style*="color: #f1f5f9"],
+html[data-theme="light"] h1[style*="color: #f1f5f9"],
+html[data-theme="light"] h2[style*="color: #f1f5f9"],
+html[data-theme="light"] h3[style*="color: #f1f5f9"] {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] div[style*="color: #e2e8f0"],
+html[data-theme="light"] span[style*="color: #e2e8f0"] {
+  color: #334155 !important;
+}
+
+/* BottomNav light mode */
+html[data-theme="light"] nav[style*="background: #1a1a24"],
+html[data-theme="light"] nav[style*="background:#1a1a24"],
+html[data-theme="light"] nav[style*="background: white"],
+html[data-theme="light"] nav {
+  background-color: #ffffff !important;
+  border-top-color: #e2e8f0 !important;
+}
+
+/* Border colors */
+html[data-theme="light"] div[style*="border-color: #2d3748"],
+html[data-theme="light"] div[style*="borderColor: '#2d3748'"] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Input fields */
+html[data-theme="light"] input,
+html[data-theme="light"] textarea,
+html[data-theme="light"] select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
-
 ::-webkit-scrollbar-track {
   background: #1a1a24;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #2d3748;
   border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #4a5568;
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
 }
 
 * {
@@ -61,6 +137,7 @@ html {
 button {
   transition: all 0.15s ease;
 }
+
 /* Hide scrollbar for tag chips row */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
