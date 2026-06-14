@@ -42,9 +42,17 @@ export default function CurrentAffairsPage() {
 };
 
   useEffect(() => {
-    loadArticles().finally(() => setLoading(false));
-  }, []);
-
+  const init = async () => {
+    const found = await loadArticles();   // pehla cache check
+    if (!found) {
+      setGenerating(true);
+      await loadArticles(true);           // auto-generate if empty
+      setGenerating(false);
+    }
+    setLoading(false);
+  };
+  init();
+}, []);
   // Generate MCQ for an article using Gemini
   const generateMCQ = async (article) => {
     setMcqArticle(article);

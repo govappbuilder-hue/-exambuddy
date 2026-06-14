@@ -48,11 +48,15 @@ export default function DashboardPage() {
   const pct = targets.length ? Math.round((doneCnt / targets.length) * 100) : 0;
 
   const quickActions = [
-    { icon: '⚡', label: 'Generate Quiz', sub: 'AI-powered MCQs', color: '#6366f1', href: '/quiz' },
-    { icon: '🤖', label: 'AI Doubt', sub: 'Instant answers', color: '#8b5cf6', href: '/doubt-solver' },
-    { icon: '🎴', label: 'Flashcards', sub: 'Study & Review', color: '#14b8a6', href: '/flashcards' },
-    { icon: '📰', label: "Today's News", sub: 'Current Affairs', color: '#f59e0b', href: '/current-affairs' },
-  ];
+  { icon: '⚡', label: 'Generate Quiz', sub: 'AI-powered MCQs', color: '#6366f1', href: '/quiz' },
+  { icon: '🤖', label: 'AI Doubt', sub: 'Instant answers', color: '#8b5cf6', href: '/doubt-solver' },
+  { icon: '🎴', label: 'Flashcards', sub: 'Study & Review', color: '#14b8a6', href: '/flashcards' },
+  { icon: '📰', label: "Today's News", sub: 'Current Affairs', color: '#f59e0b', href: '/current-affairs' },
+  { icon: '📷', label: 'AI Quiz', sub: 'Photo/PDF thi', color: '#ec4899', href: '/ai-quiz' },
+  { icon: '🏅', label: 'Badges', sub: 'Tara achievements', color: '#f97316', href: '/badges' },
+  { icon: '🥇', label: 'Leaderboard', sub: 'Top rankers', color: '#10b981', href: '/leaderboard' },
+  { icon: '🔖', label: 'Bookmarks', sub: 'Saved questions', color: '#3b82f6', href: '/bookmarks' },
+];
 
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || 'Student';
 
