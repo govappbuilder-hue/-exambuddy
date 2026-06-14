@@ -1,5 +1,6 @@
 import "./globals.css";
 import BottomNav from "../components/BottomNav";
+import { ThemeProvider } from "../context/ThemeContext";
 
 export const metadata = {
   title: "ExamBuddy - Gujarat Govt Exam | GPSC, PSI, Talati, GSSSB",
@@ -25,8 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#6366f1" />
       </head>
       <body>
-        {children}
-        <BottomNav />
+        <ThemeProvider>
+          {children}
+          <BottomNav />
+        </ThemeProvider>
       </body>
     </html>
   );
