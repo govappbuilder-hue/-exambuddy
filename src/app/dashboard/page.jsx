@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 
+const COLORS = ['#f59e0b','#6366f1','#10b981','#ec4899','#3b82f6','#f97316','#8b5cf6','#14b8a6'];
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -17,6 +19,12 @@ export default function DashboardPage() {
   const [showAddTarget, setShowAddTarget] = useState(false);
   const [stats, setStats] = useState({ quizzes: 0, accuracy: 0, streak: 0, rank: '-' });
 
+  // Exam Countdown state
+  const [exams, setExams] = useState([]);
+  const [showAddExam, setShowAddExam] = useState(false);
+  const [examName, setExamName] = useState('');
+  const [examDate, setExamDate] = useState('');
+
   useEffect(() => {
     const h = new Date().getHours();
     if (h < 12) setTimeOfDay('Morning');
@@ -25,7 +33,35 @@ export default function DashboardPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) setUser(data.user);
     });
+    // Load exams from localStorage
+    const saved = localStorage.getItem('eb_exams');
+    if (saved) {
+      setExams(JSON.parse(saved));
+    } else {
+      // Default exams
+      const defaults = [
+        { id: 1, name: 'GSSSB Junior Clerk 2026', date: '2026-07-12' },
+        { id: 2, name: 'IBPS PO 2026', date: '2026-08-10' },
+      ];
+      setExams(defaults);
+      localStorage.setItem('eb_exams', JSON.stringify(defaults));
+    }
   }, []);
+
+  const addExam = () => {
+    if (!examName.trim() || !examDate) return;
+    const newExam = { id: Date.now(), name: examName.trim(), date: examDate };
+    const updated = [...exams, newExam];
+    setExams(updated);
+    localStorage.setItem('eb_exams', JSON.stringify(updated));
+    setExamName(''); setExamDate(''); setShowAddExam(false);
+  };
+
+  const removeExam = (id) => {
+    const updated = exams.filter(e => e.id !== id);
+    setExams(updated);
+    localStorage.setItem('eb_exams', JSON.stringify(updated));
+  };
 
   const toggleTarget = (id) => setTargets(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
   const addTarget = () => {
@@ -37,21 +73,20 @@ export default function DashboardPage() {
   const doneCnt = targets.filter(t => t.done).length;
   const pct = targets.length ? Math.round((doneCnt / targets.length) * 100) : 0;
 
- const quickActions = [
-  { icon: '\u{1F9E0}', label: 'Generate Quiz', sub: 'AI-powered MCQs', color: '#6366f1', href: '/quiz' },
-  { icon: '\u{1F916}', label: 'AI Doubt', sub: 'Instant answers', color: '#8b5cf6', href: '/doubt-solver' },
-  { icon: '\u{1F4DA}', label: 'Flashcards', sub: 'Study & Review', color: '#14b8a6', href: '/flashcards' },
-  { icon: '\u{1F4F0}', label: "Today's News", sub: 'Current Affairs', color: '#f59e0b', href: '/current-affairs' },
-  { icon: '\u{1F4F7}', label: 'AI Quiz', sub: 'Photo/PDF thi', color: '#ec4899', href: '/ai-quiz' },
-  { icon: '\u{1F3C6}', label: 'Badges', sub: 'Tara achievements', color: '#f97316', href: '/badges' },
-  { icon: '\u{1F3C5}', label: 'Leaderboard', sub: 'Top rankers', color: '#10b981', href: '/leaderboard' },
-  { icon: '\u{1F516}', label: 'Bookmarks', sub: 'Saved questions', color: '#3b82f6', href: '/bookmarks' },
-];
+  const quickActions = [
+    { icon: '\u{1F9E0}', label: 'Generate Quiz', sub: 'AI-powered MCQs', color: '#6366f1', href: '/quiz' },
+    { icon: '\u{1F916}', label: 'AI Doubt', sub: 'Instant answers', color: '#8b5cf6', href: '/doubt-solver' },
+    { icon: '\u{1F4DA}', label: 'Flashcards', sub: 'Study & Review', color: '#14b8a6', href: '/flashcards' },
+    { icon: '\u{1F4F0}', label: "Today's News", sub: 'Current Affairs', color: '#f59e0b', href: '/current-affairs' },
+    { icon: '\u{1F4F7}', label: 'AI Quiz', sub: 'Photo/PDF thi', color: '#ec4899', href: '/ai-quiz' },
+    { icon: '\u{1F3C6}', label: 'Badges', sub: 'Tara achievements', color: '#f97316', href: '/badges' },
+    { icon: '\u{1F3C5}', label: 'Leaderboard', sub: 'Top rankers', color: '#10b981', href: '/leaderboard' },
+    { icon: '\u{1F516}', label: 'Bookmarks', sub: 'Saved questions', color: '#3b82f6', href: '/bookmarks' },
+  ];
 
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || 'Student';
-
-  // Greeting emoji based on time
   const greetingEmoji = timeOfDay === 'Morning' ? '\u{1F31E}' : timeOfDay === 'Afternoon' ? '\u{1F31D}' : '\u{1F319}';
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4ff', fontFamily: 'Inter, system-ui', paddingBottom: '90px' }}>
@@ -101,6 +136,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Today's Targets */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div>
@@ -127,25 +163,68 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* Exam Countdown */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>Exam Countdown</div>
-            <button onClick={() => router.push('/my-progress')} style={{ background: '#f0f4ff', color: '#6366f1', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>+ Add Exam</button>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>📅 Exam Countdown</div>
+            <button onClick={() => setShowAddExam(!showAddExam)} style={{ background: '#f0f4ff', color: '#6366f1', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>+ Add Exam</button>
           </div>
-          {[
-            { name: 'GSSSB Junior Clerk 2026', date: '2026-07-12', color: '#f59e0b' },
-            { name: 'IBPS PO 2026', date: '2026-08-10', color: '#6366f1' },
-          ].map((exam, i) => {
+
+          {/* Add Exam Form */}
+          {showAddExam && (
+            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '12px', border: '1.5px solid #e2e8f0' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '8px' }}>📝 Navo Exam Umerо</div>
+              <input
+                value={examName}
+                onChange={e => setExamName(e.target.value)}
+                placeholder="Exam name (e.g. GPSC Class 1-2)"
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none', marginBottom: '8px', boxSizing: 'border-box' }}
+              />
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>📅 Exam date select karo:</div>
+              <input
+                type="date"
+                value={examDate}
+                min={today}
+                onChange={e => setExamDate(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={addExam} disabled={!examName.trim() || !examDate} style={{ flex: 1, background: examName.trim() && examDate ? '#6366f1' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '13px', fontWeight: '700', cursor: examName.trim() && examDate ? 'pointer' : 'not-allowed' }}>
+                  ✅ Save Exam
+                </button>
+                <button onClick={() => { setShowAddExam(false); setExamName(''); setExamDate(''); }} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {exams.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: '#94a3b8', fontSize: '13px' }}>
+              Koi exam nathi. "+ Add Exam" thi umerо!
+            </div>
+          )}
+
+          {exams.map((exam, i) => {
             const days = Math.max(0, Math.ceil((new Date(exam.date) - new Date()) / (1000 * 60 * 60 * 24)));
+            const color = COLORS[i % COLORS.length];
+            const urgency = days <= 7 ? '#ef4444' : days <= 30 ? '#f59e0b' : color;
             return (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i === 0 ? '1px solid #f1f5f9' : 'none' }}>
-                <div>
+              <div key={exam.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < exams.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{exam.name}</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{exam.date}</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                    {new Date(exam.date).toLocaleDateString('gu-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {days <= 7 && days > 0 && <span style={{ color: '#ef4444', fontWeight: '700', marginLeft: '6px' }}>⚠️ Jaldi!</span>}
+                    {days === 0 && <span style={{ color: '#ef4444', fontWeight: '700', marginLeft: '6px' }}>🔴 Aaj!</span>}
+                  </div>
                 </div>
-                <div style={{ background: exam.color + '15', color: exam.color, borderRadius: '10px', padding: '6px 12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '18px', fontWeight: '800' }}>{days}</div>
-                  <div style={{ fontSize: '10px', fontWeight: '600' }}>DAYS</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ background: urgency + '15', color: urgency, borderRadius: '10px', padding: '6px 12px', textAlign: 'center', minWidth: '56px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '800' }}>{days}</div>
+                    <div style={{ fontSize: '10px', fontWeight: '600' }}>DAYS</div>
+                  </div>
+                  <button onClick={() => removeExam(exam.id)} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '16px', padding: '4px' }}>×</button>
                 </div>
               </div>
             );
