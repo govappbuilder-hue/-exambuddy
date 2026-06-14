@@ -161,7 +161,7 @@ export default function DoubtSolverPage() {
       </div>
 
       {/* Input */}
-      <div style={{ background: '#1e293b', borderTop: '1px solid #334155', padding: '14px 20px', position: 'sticky', bottom: 0 }}>
+      <div style={{ background: '#1e293b', borderTop: '1px solid #334155', padding: '14px 20px', paddingBottom: '80px', position: 'sticky', bottom: 0 }}>
         <div style={{ maxWidth: '750px', margin: '0 auto', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
           <textarea
             value={input}
