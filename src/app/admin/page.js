@@ -333,6 +333,90 @@ export default function AdminPage() {
           </div>
         )}
 
+        {tab === 'pdf' && (
+  <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+    <div style={{ fontWeight: '800', color: '#1e1b4b', marginBottom: '16px', fontSize: '16px' }}>PDF Upload — Study Materials</div>
+
+    {pdfResult && (
+      <div style={{ background: pdfResult.type === 'success' ? '#dcfce7' : pdfResult.type === 'error' ? '#fee2e2' : '#fffbeb', color: pdfResult.type === 'success' ? '#166534' : pdfResult.type === 'error' ? '#dc2626' : '#92400e', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontWeight: '600' }}>
+        {pdfResult.msg}
+      </div>
+    )}
+
+    <div style={{ marginBottom: '12px' }}>
+      <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '13px' }}>PDF Title</label>
+      <input value={pdfTitle} onChange={e => setPdfTitle(e.target.value)} placeholder="Eg: Ancient India Notes Chapter 1"
+        style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+    </div>
+
+    <div style={{ marginBottom: '12px' }}>
+      <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '13px' }}>Topic Name</label>
+      <input value={pdfTopic} onChange={e => setPdfTopic(e.target.value)} placeholder="Eg: Ancient India"
+        style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+    </div>
+
+    <div style={{ marginBottom: '12px' }}>
+      <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '13px' }}>Topic ID (1-22)</label>
+      <input value={pdfTopicId} onChange={e => setPdfTopicId(e.target.value)} placeholder="Eg: 1"
+        style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+    </div>
+
+    <div style={{ marginBottom: '12px' }}>
+      <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '13px' }}>Subject</label>
+      <select value={pdfSubject} onChange={e => setPdfSubject(e.target.value)}
+        style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none' }}>
+        <option value="history">History</option>
+        <option value="polity">Polity</option>
+        <option value="geography">Geography</option>
+        <option value="economy">Economy</option>
+        <option value="science">Science</option>
+        <option value="maths">Maths</option>
+      </select>
+    </div>
+
+    <div style={{ marginBottom: '16px' }}>
+      <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '13px' }}>Material Type</label>
+      <select value={pdfType} onChange={e => setPdfType(e.target.value)}
+        style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none' }}>
+        <option value="notes">Notes</option>
+        <option value="mind_maps">Mind Maps</option>
+        <option value="previous_year">Previous Year</option>
+        <option value="practice_set">Practice Set</option>
+      </select>
+    </div>
+
+    <div style={{ marginBottom: '16px' }}>
+      <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '13px' }}>PDF File Select karo</label>
+      <input type="file" accept=".pdf,.png,.jpg,.jpeg"
+        onChange={e => setPdfFile(e.target.files[0])}
+        style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', boxSizing: 'border-box' }} />
+      {pdfFile && <div style={{ fontSize: '12px', color: '#10b981', marginTop: '4px', fontWeight: '600' }}>Selected: {pdfFile.name}</div>}
+    </div>
+
+    <button onClick={handlePdfUpload} disabled={pdfUploading}
+      style={{ width: '100%', padding: '14px', background: pdfUploading ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: pdfUploading ? 'not-allowed' : 'pointer' }}>
+      {pdfUploading ? 'Uploading...' : '📄 PDF Upload Karo'}
+    </button>
+  </div>
+)}
+
+        {tab === 'pdf' && (
+  <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+    <div style={{ fontWeight: '800', color: '#1e1b4b', marginBottom: '16px', fontSize: '16px' }}>PDF Upload � Study Materials</div>
+
+    {pdfResult && (
+      <div style={{ background: pdfResult.type === 'success' ? '#dcfce7' : pdfResult.type === 'error' ? '#fee2e2' : '#fffbeb', color: pdfResult.type === 'success' ? '#166534' : pdfResult.type === 'error' ? '#dc2626' : '#92400e', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontWeight: '600' }}>
+        {pdfResult.msg}
+      </div>
+    )}
+
+    <button onClick={handlePdfUpload} disabled={pdfUploading}
+      style={{ width: '100%', padding: '14px', background: pdfUploading ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: pdfUploading ? 'not-allowed' : 'pointer' }}>
+      {pdfUploading ? 'Uploading...' : 'PDF Upload Karo'}
+    </button>
+  </div>
+)}
+
         {tab === 'single' && (
           <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             {msg && (
