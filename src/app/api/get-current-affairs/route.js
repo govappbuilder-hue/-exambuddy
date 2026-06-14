@@ -68,9 +68,9 @@ Respond with ONLY a JSON array. No explanation. No markdown.
 Format: [{"title":"Gujarati headline","summary":"2-3 sentences in Gujarati","category":"National","importance":"High","gujarati_keywords":["word1","word2"]}]
 Categories: National, International, Economy, Science, Sports, Gujarat`;
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
+     const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
