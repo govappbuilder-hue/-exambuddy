@@ -48,7 +48,7 @@ export async function GET(request) {
       year: "numeric", month: "long", day: "numeric"
     });
 
-    const prompt = `Generate 8 important current affairs for ${today} for GPSC/UPSC exam preparation in Gujarati language.
+    const prompt = `Generate 5 current affairs for ${today} for GPSC/UPSC exam preparation in Gujarati language.
 Respond with ONLY this JSON array format, nothing else:
 [{"title":"headline in Gujarati","summary":"2-3 line summary in Gujarati","category":"National","importance":"High"}]
 Categories must be one of: National, International, Economy, Science, Sports
@@ -70,7 +70,7 @@ Importance must be one of: High, Medium`;
           { role: "user", content: prompt }
         ],
         temperature: 0.5,
-        max_tokens: 2000,
+        max_tokens: 4000,
       }),
     });
 
