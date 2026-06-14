@@ -38,15 +38,15 @@ export default function DashboardPage() {
   const pct = targets.length ? Math.round((doneCnt / targets.length) * 100) : 0;
 
   const quickActions = [
-    { icon: '⚡', label: 'Generate Quiz', sub: 'AI-powered MCQs', color: '#6366f1', href: '/quiz' },
-    { icon: '🤖', label: 'AI Doubt', sub: 'Instant answers', color: '#8b5cf6', href: '/doubt-solver' },
-    { icon: '🎴', label: 'Flashcards', sub: 'Study & Review', color: '#14b8a6', href: '/flashcards' },
-    { icon: '📰', label: "Today's News", sub: 'Current Affairs', color: '#f59e0b', href: '/current-affairs' },
-    { icon: '📷', label: 'AI Quiz', sub: 'Photo/PDF thi', color: '#ec4899', href: '/ai-quiz' },
-    { icon: '🏅', label: 'Badges', sub: 'Tara achievements', color: '#f97316', href: '/badges' },
-    { icon: '🥇', label: 'Leaderboard', sub: 'Top rankers', color: '#10b981', href: '/leaderboard' },
-    { icon: '🔖', label: 'Bookmarks', sub: 'Saved questions', color: '#3b82f6', href: '/bookmarks' },
-  ];
+  { icon: 'Q', label: 'Generate Quiz', sub: 'AI-powered MCQs', color: '#6366f1', href: '/quiz' },
+  { icon: 'AI', label: 'AI Doubt', sub: 'Instant answers', color: '#8b5cf6', href: '/doubt-solver' },
+  { icon: 'FC', label: 'Flashcards', sub: 'Study & Review', color: '#14b8a6', href: '/flashcards' },
+  { icon: 'CA', label: "Today's News", sub: 'Current Affairs', color: '#f59e0b', href: '/current-affairs' },
+  { icon: 'AQ', label: 'AI Quiz', sub: 'Photo/PDF thi', color: '#ec4899', href: '/ai-quiz' },
+  { icon: 'BD', label: 'Badges', sub: 'Tara achievements', color: '#f97316', href: '/badges' },
+  { icon: 'LB', label: 'Leaderboard', sub: 'Top rankers', color: '#10b981', href: '/leaderboard' },
+  { icon: 'BM', label: 'Bookmarks', sub: 'Saved questions', color: '#3b82f6', href: '/bookmarks' },
+];
 
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || 'Student';
 
@@ -57,19 +57,19 @@ export default function DashboardPage() {
         <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
           <div>
-            <div style={{ fontSize: '13px', opacity: 0.85, marginBottom: '4px' }}>Good {timeOfDay} 👋</div>
-            <div style={{ fontSize: '22px', fontWeight: '800', lineHeight: 1.2 }}>Ready to crack<br />today's exam? 🎯</div>
+            <div style={{ fontSize: '13px', opacity: 0.85, marginBottom: '4px' }}>Good {timeOfDay} ??</div>
+            <div style={{ fontSize: '22px', fontWeight: '800', lineHeight: 1.2 }}>Ready to crack<br />today's exam? ??</div>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '8px 12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '800' }}>🔥 {stats.streak}</div>
+            <div style={{ fontSize: '20px', fontWeight: '800' }}>?? {stats.streak}</div>
             <div style={{ fontSize: '10px', opacity: 0.8 }}>DAY STREAK</div>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
           {[
-            { label: 'Quizzes Done', value: stats.quizzes, icon: '📝' },
-            { label: 'Accuracy', value: stats.accuracy + '%', icon: '🎯' },
-            { label: 'Your Rank', value: stats.rank, icon: '🏆' },
+            { label: 'Quizzes Done', value: stats.quizzes, icon: '??' },
+            { label: 'Accuracy', value: stats.accuracy + '%', icon: '??' },
+            { label: 'Your Rank', value: stats.rank, icon: '??' },
           ].map((s, i) => (
             <div key={i} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 8px', textAlign: 'center' }}>
               <div style={{ fontSize: '16px' }}>{s.icon}</div>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
       <div style={{ padding: '16px', maxWidth: '640px', margin: '0 auto' }}>
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            ⚡ Quick Actions
+            ? Quick Actions
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {quickActions.map((a, i) => (
@@ -101,8 +101,8 @@ export default function DashboardPage() {
         <div style={{ background: 'white', borderRadius: '20px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>🎯 Today's Targets</div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{doneCnt}/{targets.length} done · {pct}% complete</div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>?? Today's Targets</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{doneCnt}/{targets.length} done � {pct}% complete</div>
             </div>
             <button onClick={() => setShowAddTarget(!showAddTarget)} style={{ background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>+ Add</button>
           </div>
@@ -112,12 +112,12 @@ export default function DashboardPage() {
           {showAddTarget && (
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
               <input value={newTarget} onChange={e => setNewTarget(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTarget()} placeholder="Navo target type karo..." style={{ flex: 1, padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none' }} />
-              <button onClick={addTarget} style={{ background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontWeight: '700', cursor: 'pointer' }}>✓</button>
+              <button onClick={addTarget} style={{ background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontWeight: '700', cursor: 'pointer' }}>?</button>
             </div>
           )}
           {targets.map(t => (
             <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc' }}>
-              <button onClick={() => toggleTarget(t.id)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: t.done ? 'none' : '2px solid #cbd5e1', background: t.done ? '#6366f1' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px' }}>{t.done ? '✓' : ''}</button>
+              <button onClick={() => toggleTarget(t.id)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: t.done ? 'none' : '2px solid #cbd5e1', background: t.done ? '#6366f1' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px' }}>{t.done ? '?' : ''}</button>
               <span style={{ flex: 1, fontSize: '13px', color: t.done ? '#94a3b8' : '#1e293b', textDecoration: t.done ? 'line-through' : 'none' }}>{t.text}</span>
               <button onClick={() => removeTarget(t.id)} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '16px', padding: '0' }}>x</button>
             </div>
