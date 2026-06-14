@@ -6,7 +6,7 @@ const tabs = [
   { href: '/', icon: '🏠', label: 'Home' },
   { href: '/quiz', icon: '📝', label: 'Quiz' },
   { href: '/mock-test', icon: '🏆', label: 'Mock Test' },
-  { href: '/marketplace', icon: '🛒', label: 'Market' },
+  { href: '/study-materials', icon: '🛒', label: 'Market' },
   { href: '/my-progress', icon: '📊', label: 'Profile' },
 ];
 
