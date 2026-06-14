@@ -49,7 +49,7 @@ export async function POST(req) {
       if (mimeType === 'application/pdf') {
         // PDF → text extract
         try {
-          const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+          const pdfParse = (await import('pdf-parse'));;
           const pdfData = await pdfParse(buffer);
           textContent = pdfData.text?.slice(0, 3000) || '';
         } catch (e) {
