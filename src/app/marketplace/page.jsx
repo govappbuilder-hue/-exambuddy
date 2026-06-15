@@ -15,6 +15,14 @@ const SUBJECTS = [
   { id: 'gk', name: 'GK', icon: '🌐', color: '#06b6d4' },
   { id: 'reasoning', name: 'Reasoning', icon: '🧩', color: '#a855f7' },
   { id: 'computer', name: 'Computer', icon: '💻', color: '#0ea5e9' },
+  { id: 'english', name: 'English', icon: '🔤', color: '#3b82f6' },
+  { id: 'current_affairs', name: 'Current Affairs', icon: '📰', color: '#ef4444' },
+  { id: 'gujarati_sahitya', name: 'Gujarati Sahitya', icon: '✍️', color: '#d97706' },
+  { id: 'gujarati_vyakran', name: 'Gujarati Vyakran', icon: '📚', color: '#7c3aed' },
+  { id: 'law', name: 'Law', icon: '⚖️', color: '#0891b2' },
+  { id: 'gk', name: 'GK', icon: '🌐', color: '#06b6d4' },
+  { id: 'heritage', name: 'Cultural Heritage', icon: '🏺', color: '#b45309' },
+  { id: 'pub_ad', name: 'Public Admin', icon: '🏛️', color: '#059669' },
 ];
 
 const TAB_CONFIG = [
