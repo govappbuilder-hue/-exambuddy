@@ -4,58 +4,34 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../context/ThemeContext';
 
-const subjects = [
-  { id: 'history', name: 'History', icon: '🏛️', color: '#f59e0b', topics: [
-    { id: '1', title: 'Ancient India', chapters: 12, completed: 4 },
-    { id: '2', title: 'Medieval India', chapters: 10, completed: 2 },
-    { id: '3', title: 'Modern India', chapters: 15, completed: 7 },
-    { id: '4', title: 'World History', chapters: 8, completed: 0 },
-  ]},
-  { id: 'polity', name: 'Polity', icon: '⚖️', color: '#6366f1', topics: [
-    { id: '5', title: 'Constitution', chapters: 14, completed: 5 },
-    { id: '6', title: 'Parliament', chapters: 8, completed: 3 },
-    { id: '7', title: 'Judiciary', chapters: 6, completed: 6 },
-    { id: '8', title: 'Local Governance', chapters: 5, completed: 0 },
-  ]},
-  { id: 'geography', name: 'Geography', icon: '🌍', color: '#10b981', topics: [
-    { id: '9', title: 'Physical Geography', chapters: 10, completed: 2 },
-    { id: '10', title: 'Indian Geography', chapters: 12, completed: 4 },
-    { id: '11', title: 'World Geography', chapters: 8, completed: 1 },
-    { id: '12', title: 'Environment', chapters: 7, completed: 0 },
-  ]},
-  { id: 'economy', name: 'Economy', icon: '💹', color: '#ec4899', topics: [
-    { id: '13', title: 'Basics of Economy', chapters: 8, completed: 3 },
-    { id: '14', title: 'Indian Economy', chapters: 11, completed: 1 },
-    { id: '15', title: 'Budget & Finance', chapters: 6, completed: 0 },
-  ]},
-  { id: 'science', name: 'Science', icon: '🔬', color: '#14b8a6', topics: [
-    { id: '16', title: 'Physics', chapters: 10, completed: 4 },
-    { id: '17', title: 'Chemistry', chapters: 9, completed: 2 },
-    { id: '18', title: 'Biology', chapters: 11, completed: 5 },
-  ]},
-  { id: 'maths', name: 'Maths', icon: '➕', color: '#8b5cf6', topics: [
-    { id: '19', title: 'Number System', chapters: 6, completed: 6 },
-    { id: '20', title: 'Algebra', chapters: 8, completed: 3 },
-    { id: '21', title: 'Geometry', chapters: 7, completed: 1 },
-    { id: '22', title: 'Data Interpretation', chapters: 5, completed: 0 },
-  ]},
+const SUBJECTS = [
+  { id: 'history', name: 'History', icon: '🏛️', color: '#f59e0b' },
+  { id: 'constitution', name: 'Polity', icon: '⚖️', color: '#6366f1' },
+  { id: 'geography', name: 'Geography', icon: '🌍', color: '#10b981' },
+  { id: 'economics', name: 'Economy', icon: '💹', color: '#ec4899' },
+  { id: 'science', name: 'Science', icon: '🔬', color: '#14b8a6' },
+  { id: 'maths', name: 'Maths', icon: '➕', color: '#8b5cf6' },
+  { id: 'gujarati', name: 'Gujarati', icon: '📜', color: '#f97316' },
+  { id: 'gk', name: 'GK', icon: '🌐', color: '#06b6d4' },
+  { id: 'reasoning', name: 'Reasoning', icon: '🧩', color: '#a855f7' },
+  { id: 'computer', name: 'Computer', icon: '💻', color: '#0ea5e9' },
 ];
 
-const tabConfig = [
+const TAB_CONFIG = [
   { key: 'notes', label: 'Notes', icon: '📖', color: '#6366f1' },
   { key: 'mind_maps', label: 'Mind Maps', icon: '🧠', color: '#8b5cf6' },
-  { key: 'previous_year', label: 'Previous Year', icon: '📊', color: '#f59e0b' },
-  { key: 'practice_set', label: 'Practice Set', icon: '📝', color: '#10b981' },
+  { key: 'previous_year', label: 'Prev Year', icon: '📊', color: '#f59e0b' },
+  { key: 'practice_set', label: 'Practice', icon: '📝', color: '#10b981' },
 ];
 
 export default function MarketplacePage() {
   const router = useRouter();
   const { dark } = useTheme();
   const [activeSubject, setActiveSubject] = useState('history');
-  const [activeTopic, setActiveTopic] = useState(null);
   const [activeTab, setActiveTab] = useState('notes');
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [counts, setCounts] = useState({});
   const [search, setSearch] = useState('');
 
   const bg = dark ? '#0f0f13' : '#f0f4ff';
@@ -63,55 +39,82 @@ export default function MarketplacePage() {
   const textPrimary = dark ? '#f1f5f9' : '#1e293b';
   const textSecondary = dark ? '#94a3b8' : '#64748b';
   const borderColor = dark ? '#2d3748' : '#f1f5f9';
-  const inputBg = dark ? '#0f172a' : 'white';
 
-  const currentSubject = subjects.find(s => s.id === activeSubject);
-  const filteredTopics = currentSubject?.topics.filter(t =>
-    t.title.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const currentSubject = SUBJECTS.find(s => s.id === activeSubject);
 
-  const totalChapters = subjects.reduce((a, s) => a + s.topics.reduce((b, t) => b + t.chapters, 0), 0);
-  const completedChapters = subjects.reduce((a, s) => a + s.topics.reduce((b, t) => b + t.completed, 0), 0);
-  const overallPct = Math.round((completedChapters / totalChapters) * 100);
+  // Load material counts per subject
+  useEffect(() => {
+    const loadCounts = async () => {
+      const { data } = await supabase
+        .from('study_materials')
+        .select('subject');
+      if (data) {
+        const c = {};
+        data.forEach(r => { c[r.subject] = (c[r.subject] || 0) + 1; });
+        setCounts(c);
+      }
+    };
+    loadCounts();
+  }, []);
 
   useEffect(() => {
-    if (activeTopic) fetchMaterials();
-  }, [activeTopic, activeTab]);
+    fetchMaterials();
+  }, [activeSubject, activeTab]);
 
   const fetchMaterials = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from('study_materials')
       .select('*')
       .eq('subject', activeSubject)
-      .eq('topic_id', activeTopic.id)
       .eq('material_type', activeTab)
       .order('created_at', { ascending: false });
+    if (search.trim()) query = query.ilike('title', `%${search.trim()}%`);
+    const { data } = await query;
     setMaterials(data || []);
     setLoading(false);
   };
 
-  const activeTabConfig = tabConfig.find(t => t.key === activeTab);
+  const handleSearch = async (val) => {
+    setSearch(val);
+    setLoading(true);
+    let query = supabase
+      .from('study_materials')
+      .select('*')
+      .eq('subject', activeSubject)
+      .eq('material_type', activeTab)
+      .order('created_at', { ascending: false });
+    if (val.trim()) query = query.ilike('title', `%${val.trim()}%`);
+    const { data } = await query;
+    setMaterials(data || []);
+    setLoading(false);
+  };
 
-  if (activeTopic) {
-    return (
-      <div style={{ minHeight: '100vh', background: bg, fontFamily: 'Inter, system-ui', paddingBottom: '90px', transition: 'background 0.3s' }}>
-        <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', padding: '20px 16px', color: 'white' }}>
-          <button onClick={() => setActiveTopic(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '10px', padding: '6px 14px', color: 'white', fontSize: '13px', cursor: 'pointer', marginBottom: '12px' }}>
-            ← Back
-          </button>
-          <div style={{ fontSize: '20px', fontWeight: '800' }}>{activeTopic.title}</div>
-          <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px', textTransform: 'capitalize' }}>{activeSubject} • {activeTopic.chapters} chapters</div>
-        </div>
+  const activeTabCfg = TAB_CONFIG.find(t => t.key === activeTab);
+  const totalMaterials = Object.values(counts).reduce((a, b) => a + b, 0);
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', padding: '16px' }}>
-          {tabConfig.map(tab => (
+  return (
+    <div style={{ minHeight: '100vh', background: bg, fontFamily: 'Inter, system-ui', paddingBottom: '90px' }}>
+
+      {/* Header */}
+      <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', padding: '20px 16px 24px', color: 'white' }}>
+        <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '4px' }}>Study Materials</div>
+        <div style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>Marketplace 📚</div>
+        <div style={{ fontSize: '13px', opacity: 0.8 }}>{totalMaterials} materials available</div>
+      </div>
+
+      <div style={{ padding: '16px', maxWidth: '640px', margin: '0 auto' }}>
+
+        {/* Tab buttons */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+          {TAB_CONFIG.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
               background: activeTab === tab.key ? tab.color : cardBg,
               color: activeTab === tab.key ? 'white' : textSecondary,
               border: 'none', borderRadius: '14px', padding: '12px 4px',
               textAlign: 'center', cursor: 'pointer',
               boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
+              transition: 'all 0.2s',
             }}>
               <div style={{ fontSize: '18px', marginBottom: '4px' }}>{tab.icon}</div>
               <div style={{ fontSize: '10px', fontWeight: '700' }}>{tab.label}</div>
@@ -119,120 +122,83 @@ export default function MarketplacePage() {
           ))}
         </div>
 
-        <div style={{ padding: '0 16px' }}>
+        {/* Search */}
+        <div style={{ background: cardBg, borderRadius: '14px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <span>🔍</span>
+          <input value={search} onChange={e => handleSearch(e.target.value)} placeholder="Material search karo..."
+            style={{ border: 'none', outline: 'none', flex: 1, fontSize: '14px', color: textPrimary, background: 'transparent' }} />
+        </div>
+
+        {/* Subject pills */}
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '16px', scrollbarWidth: 'none' }}>
+          {SUBJECTS.map(s => (
+            <button key={s.id} onClick={() => setActiveSubject(s.id)} style={{
+              background: activeSubject === s.id ? s.color : cardBg,
+              color: activeSubject === s.id ? 'white' : textSecondary,
+              border: 'none', borderRadius: '20px', padding: '7px 14px',
+              fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap',
+              boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
+            }}>
+              {s.icon} {s.name} {counts[s.id] ? `(${counts[s.id]})` : ''}
+            </button>
+          ))}
+        </div>
+
+        {/* Materials list */}
+        <div style={{ background: cardBg, borderRadius: '20px', overflow: 'hidden', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
+          {/* Subject header */}
+          <div style={{ background: (currentSubject?.color || '#6366f1') + '20', padding: '14px 16px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '24px' }}>{currentSubject?.icon}</span>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: textPrimary }}>{currentSubject?.name} — {activeTabCfg?.label}</div>
+              <div style={{ fontSize: '12px', color: textSecondary }}>{materials.length} materials</div>
+            </div>
+          </div>
+
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: textSecondary }}>Loading...</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: textSecondary }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+              Loading...
+            </div>
           ) : materials.length === 0 ? (
-            <div style={{ background: cardBg, borderRadius: '20px', padding: '40px', textAlign: 'center', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>{activeTabConfig?.icon}</div>
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>{activeTabCfg?.icon}</div>
               <div style={{ fontSize: '15px', fontWeight: '700', color: textPrimary, marginBottom: '6px' }}>
-                {activeTabConfig?.label} upload nathi thaya
+                Koi material nathi
               </div>
               <div style={{ fontSize: '13px', color: textSecondary }}>Admin panel thi PDF upload karo</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div>
               {materials.map((mat, i) => (
-                <div key={i} style={{ background: cardBg, borderRadius: '16px', padding: '16px', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '48px', height: '48px', background: activeTabConfig?.color + '20', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: activeTabConfig?.color, flexShrink: 0 }}>PDF</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: '700', color: textPrimary }}>{mat.title}</div>
-                    <div style={{ fontSize: '12px', color: textSecondary, marginTop: '2px' }}>{new Date(mat.created_at).toLocaleDateString('en-IN')}</div>
+                <div key={mat.id || i} style={{ padding: '14px 16px', borderBottom: i < materials.length - 1 ? `1px solid ${borderColor}` : 'none', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '48px', height: '48px', background: (activeTabCfg?.color || '#6366f1') + '20', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                    {activeTabCfg?.icon}
                   </div>
-                  <a href={mat.file_url} target="_blank" rel="noreferrer" style={{ background: activeTabConfig?.color, color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textDecoration: 'none' }}>
-                    Open
-                  </a>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: textPrimary, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mat.title}</div>
+                    <div style={{ fontSize: '11px', color: textSecondary }}>
+                      {mat.topic && <span style={{ marginRight: '8px' }}>🏷️ {mat.topic}</span>}
+                      {mat.is_free ? <span style={{ color: '#10b981', fontWeight: '700' }}>✅ Free</span> : <span style={{ color: '#f59e0b', fontWeight: '700' }}>💎 ₹{mat.price}</span>}
+                    </div>
+                  </div>
+                  {mat.is_free ? (
+                    <a href={mat.file_url} target="_blank" rel="noreferrer"
+                      style={{ background: activeTabCfg?.color, color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      Open
+                    </a>
+                  ) : (
+                    <button onClick={() => router.push('/premium')}
+                      style={{ background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      💎 Buy
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: 'Inter, system-ui', paddingBottom: '90px', transition: 'background 0.3s' }}>
-      <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', padding: '20px 16px 24px', color: 'white' }}>
-        <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '4px' }}>Study Materials</div>
-        <div style={{ fontSize: '22px', fontWeight: '800', marginBottom: '16px' }}>Tamara Subjects</div>
-        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '14px', padding: '14px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '600' }}>Overall Progress</span>
-            <span style={{ fontSize: '13px', fontWeight: '800' }}>{overallPct}%</span>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '6px', height: '8px' }}>
-            <div style={{ width: overallPct + '%', background: 'white', height: '100%', borderRadius: '6px' }} />
-          </div>
-          <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '6px' }}>{completedChapters} / {totalChapters} chapters complete</div>
-        </div>
-      </div>
-
-      <div style={{ padding: '16px', maxWidth: '640px', margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
-          {tabConfig.map((m, i) => (
-            <button key={i} style={{ background: cardBg, border: 'none', borderRadius: '14px', padding: '12px 6px', textAlign: 'center', cursor: 'pointer', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontSize: '22px', marginBottom: '4px' }}>{m.icon}</div>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: textSecondary }}>{m.label}</div>
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: cardBg, borderRadius: '14px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <span style={{ color: textSecondary }}>🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Topic search karo..." style={{ border: 'none', outline: 'none', flex: 1, fontSize: '14px', color: textPrimary, background: 'transparent' }} />
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '16px', scrollbarWidth: 'none' }}>
-          {subjects.map(s => (
-            <button key={s.id} onClick={() => setActiveSubject(s.id)} style={{
-              background: activeSubject === s.id ? s.color : cardBg,
-              color: activeSubject === s.id ? 'white' : textSecondary,
-              border: 'none', borderRadius: '20px', padding: '7px 14px',
-              fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-              whiteSpace: 'nowrap', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
-            }}>
-              {s.name}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: cardBg, borderRadius: '20px', overflow: 'hidden', boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ background: (currentSubject?.color || '#6366f1') + '20', padding: '14px 16px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>{currentSubject?.icon}</span>
-            <div>
-              <div style={{ fontSize: '15px', fontWeight: '800', color: textPrimary }}>{currentSubject?.name}</div>
-              <div style={{ fontSize: '12px', color: textSecondary }}>{currentSubject?.topics.length} topics</div>
-            </div>
-          </div>
-
-          {filteredTopics.map((topic, i) => {
-            const pct = Math.round((topic.completed / topic.chapters) * 100);
-            return (
-              <div key={topic.id} onClick={() => { setActiveTopic(topic); setActiveTab('notes'); }}
-                style={{ padding: '14px 16px', borderBottom: i < filteredTopics.length - 1 ? `1px solid ${borderColor}` : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
-                  <svg width="44" height="44" viewBox="0 0 44 44">
-                    <circle cx="22" cy="22" r="18" fill="none" stroke={dark ? '#2d3748' : '#f1f5f9'} strokeWidth="4"/>
-                    <circle cx="22" cy="22" r="18" fill="none" stroke={currentSubject?.color} strokeWidth="4"
-                      strokeDasharray={String(2 * Math.PI * 18)}
-                      strokeDashoffset={String(2 * Math.PI * 18 * (1 - pct / 100))}
-                      strokeLinecap="round" transform="rotate(-90 22 22)"/>
-                  </svg>
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: textSecondary }}>{pct}%</div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: '700', color: textPrimary, marginBottom: '3px' }}>{topic.title}</div>
-                  <div style={{ fontSize: '12px', color: textSecondary }}>{topic.completed}/{topic.chapters} chapters done</div>
-                </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={e => e.stopPropagation()} style={{ background: dark ? '#1e2d4a' : '#f0f4ff', border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: '700', color: '#6366f1', cursor: 'pointer' }}>Flashcard</button>
-                  <button onClick={e => e.stopPropagation()} style={{ background: (currentSubject?.color || '#6366f1') + '20', border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: '700', color: currentSubject?.color, cursor: 'pointer' }}>Quiz</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
