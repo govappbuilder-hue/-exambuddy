@@ -1,7 +1,4 @@
-// PATH: src/app/api/generate-quiz/route.js
-
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const FALLBACK = {
   questions: [
@@ -29,7 +26,7 @@ const FALLBACK = {
 export async function POST(req) {
   try {
     const contentType = req.headers.get('content-type') || '';
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
 
     if (!apiKey) return NextResponse.json(FALLBACK);
 
@@ -40,7 +37,6 @@ export async function POST(req) {
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       const file = formData.get('file');
-
       if (!file) return NextResponse.json(FALLBACK);
 
       const mimeType = file.type;
@@ -64,17 +60,15 @@ export async function POST(req) {
       textContent = body.textContent || '';
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-
-    const gujaratiInstruction = `તમે ગુજરાત સ્પર્ધાત્મક પરીક્ષા (GPSC/GSSSB/Police) માટે MCQ બનાવો છો. ફક્ત JSON response આપો, markdown નહીં.
+    const gujaratiPrompt = `તમે ગુજરાત સ્પર્ધાત્મક પરીક્ષા (GPSC/GSSSB/Police) માટે MCQ બનાવો છો.
+ફક્ત JSON response આપો, બીજું કંઈ નહીં, markdown નહીં.
 JSON structure:
 {
   "questions": [
     {
       "question": "ગુજરાતીમાં પ્રશ્ન?",
       "a": "વિકલ્પ A",
-      "b": "વિકલ્પ B",
+      "b": "વિકલ્પ B", 
       "c": "વિકલ્પ C",
       "d": "વિકલ્પ D",
       "correct_option": "a",
@@ -83,24 +77,55 @@ JSON structure:
   ]
 }`;
 
-    let result;
+    let userMessage;
 
     if (imageBase64 && imageMimeType) {
-      // IMAGE mode — Gemini Vision
-      result = await model.generateContent([
-        { inlineData: { mimeType: imageMimeType, data: imageBase64 } },
-        { text: `${gujaratiInstruction}\n\nAa image na content mathi 10 MCQ questions banavo. explanation mandatory che. Faqt JSON apo.` },
-      ]);
+      // Image mode — vision
+      userMessage = [
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:${imageMimeType};base64,${imageBase64}`
+          }
+        },
+        {
+          type: "text",
+          text: `${gujaratiPrompt}\n\nAa image na content mathi 10 MCQ questions banavo. explanation mandatory che. Faqt JSON apo.`
+        }
+      ];
     } else if (textContent.trim().length > 10) {
-      // PDF / Text mode
-      result = await model.generateContent(
-        `${gujaratiInstruction}\n\nઆ text ના આધારે 10 MCQ questions બનાવો. દરેક question unique ane exam-relevant hoy. explanation field khali na rakho:\n"${textContent.slice(0, 3000)}"\n\nFaqt JSON apo.`
-      );
+      userMessage = `${gujaratiPrompt}\n\nઆ text ના આધારે 10 MCQ questions બનાવો:\n"${textContent.slice(0, 3000)}"\n\nફક્ત JSON આપો.`;
     } else {
       return NextResponse.json(FALLBACK);
     }
 
-    let raw = result.response.text().trim();
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: imageBase64 ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'user',
+            content: userMessage
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Groq API error:', response.status);
+      return NextResponse.json(FALLBACK);
+    }
+
+    const groqData = await response.json();
+    let raw = groqData.choices?.[0]?.message?.content?.trim() || '';
+
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if (start !== -1 && end !== -1) raw = raw.slice(start, end + 1);
