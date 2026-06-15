@@ -48,13 +48,41 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [diamonds, setDiamonds] = useState(0);
+  const [userId, setUserId] = useState(null);
+  const [unlocked, setUnlocked] = useState(new Set());
+  const [unlocking, setUnlocking] = useState(null);
+  const [toast, setToast] = useState(null);
 
   const bg          = dark ? '#0f0f13' : '#f0f4ff';
   const cardBg      = dark ? '#1a1a24' : 'white';
   const textPrimary = dark ? '#f1f5f9' : '#1e293b';
   const textSec     = dark ? '#94a3b8' : '#64748b';
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    fetchAll();
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserId(user.id);
+      // Load diamond balance
+      const { data } = await supabase
+        .from('user_diamonds')
+        .select('diamonds')
+        .eq('user_id', user.id)
+        .single();
+      setDiamonds(data?.diamonds || 0);
+      // Load unlocked materials
+      const { data: unlockedData } = await supabase
+        .from('unlocked_materials')
+        .select('material_id')
+        .eq('user_id', user.id);
+      if (unlockedData) setUnlocked(new Set(unlockedData.map(u => u.material_id)));
+    }
+  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -66,19 +94,50 @@ export default function MarketplacePage() {
     setLoading(false);
   };
 
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleUnlockWithDiamonds = async (mat) => {
+    if (!userId) { showToast('Pehla login karo!', 'error'); return; }
+    const cost = mat.price || 30;
+    if (diamonds < cost) {
+      showToast(`Diamonds ochha che! Tamara: 💎${diamonds}, Jaruri: 💎${cost}`, 'error');
+      return;
+    }
+    setUnlocking(mat.id);
+    try {
+      // Deduct diamonds
+      await supabase.from('user_diamonds').upsert({
+        user_id: userId,
+        diamonds: diamonds - cost,
+      });
+      // Save unlock record
+      await supabase.from('unlocked_materials').insert({
+        user_id: userId,
+        material_id: mat.id,
+      });
+      setDiamonds(d => d - cost);
+      setUnlocked(u => new Set(u).add(mat.id));
+      showToast(`✅ Unlock thayo! -💎${cost} diamonds`);
+    } catch (e) {
+      showToast('Error aayo, try karo', 'error');
+    }
+    setUnlocking(null);
+  };
+
   const filtered = materials.filter(m => {
     const q = search.toLowerCase();
     const matchSearch = !q ||
       m.title?.toLowerCase().includes(q) ||
       m.topic?.toLowerCase().includes(q) ||
       (SUBJECT_META[m.subject]?.name || '').toLowerCase().includes(q);
-
     let matchFilter = true;
     if (filter === 'free') matchFilter = m.is_free;
     else if (filter === 'paid') matchFilter = !m.is_free;
     else if (['notes','mind_maps','previous_year','practice_set'].includes(filter))
       matchFilter = m.material_type === filter;
-
     return matchSearch && matchFilter;
   });
 
@@ -88,14 +147,47 @@ export default function MarketplacePage() {
   return (
     <div style={{ minHeight: '100vh', background: bg, fontFamily: 'Inter, system-ui', paddingBottom: '90px' }}>
 
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+          background: toast.type === 'error' ? '#fee2e2' : '#dcfce7',
+          color: toast.type === 'error' ? '#dc2626' : '#16a34a',
+          padding: '12px 20px', borderRadius: '14px', fontWeight: '700', fontSize: '13px',
+          zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', whiteSpace: 'nowrap',
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', padding: '20px 16px 28px', color: 'white' }}>
-        <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '4px' }}>Study Materials</div>
-        <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>Marketplace 📚</div>
-        <div style={{ fontSize: '13px', opacity: 0.8 }}>{materials.length} materials available</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '4px' }}>Study Materials</div>
+            <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>Marketplace 📚</div>
+            <div style={{ fontSize: '13px', opacity: 0.8 }}>{materials.length} materials available</div>
+          </div>
+          {/* Diamond balance */}
+          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '14px', padding: '10px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '22px' }}>💎</div>
+            <div style={{ fontSize: '16px', fontWeight: '900' }}>{diamonds}</div>
+            <div style={{ fontSize: '10px', opacity: 0.8 }}>Diamonds</div>
+          </div>
+        </div>
+
+        {/* Diamond earn hint */}
+        <div onClick={() => router.push('/quiz')} style={{ marginTop: '12px', background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+          <span style={{ fontSize: '18px' }}>🎯</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '12px', fontWeight: '800' }}>Quiz ramo → Diamonds kamao!</div>
+            <div style={{ fontSize: '11px', opacity: 0.8 }}>Correct answer = 💎1, 80%+ = +💎5 bonus</div>
+          </div>
+          <span style={{ fontSize: '16px', opacity: 0.7 }}>›</span>
+        </div>
 
         {/* Search */}
-        <div style={{ marginTop: '16px', background: 'rgba(255,255,255,0.15)', borderRadius: '14px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ marginTop: '12px', background: 'rgba(255,255,255,0.15)', borderRadius: '14px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span>🔍</span>
           <input
             value={search}
@@ -104,7 +196,7 @@ export default function MarketplacePage() {
             style={{ border: 'none', outline: 'none', flex: 1, fontSize: '14px', color: 'white', background: 'transparent' }}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>✕</button>
+            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px' }}>✕</button>
           )}
         </div>
       </div>
@@ -126,7 +218,6 @@ export default function MarketplacePage() {
           ))}
         </div>
 
-        {/* Count */}
         <div style={{ fontSize: '13px', color: textSec, marginBottom: '12px', fontWeight: '600' }}>
           {loading ? 'Loading...' : `${filtered.length} materials`}
           {search && <span style={{ color: '#6366f1' }}> for "{search}"</span>}
@@ -149,6 +240,10 @@ export default function MarketplacePage() {
             {filtered.map((mat, i) => {
               const s = getSubj(mat.subject);
               const t = getType(mat.material_type);
+              const isUnlocked = mat.is_free || unlocked.has(mat.id);
+              const cost = mat.price || 30;
+              const canAfford = diamonds >= cost;
+
               return (
                 <div key={mat.id || i} style={{
                   background: cardBg,
@@ -158,8 +253,9 @@ export default function MarketplacePage() {
                   display: 'flex',
                   gap: '14px',
                   alignItems: 'center',
+                  opacity: isUnlocked ? 1 : 0.95,
                 }}>
-                  {/* Subject icon */}
+                  {/* Icon */}
                   <div style={{
                     width: '52px', height: '52px', flexShrink: 0,
                     background: s.color + '22',
@@ -179,8 +275,6 @@ export default function MarketplacePage() {
                     }}>
                       {mat.title}
                     </div>
-
-                    {/* Tags */}
                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                       <span style={{ background: s.color + '22', color: s.color, fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>
                         {s.icon} {s.name}
@@ -189,23 +283,20 @@ export default function MarketplacePage() {
                         {t.icon} {t.label}
                       </span>
                       {mat.is_free ? (
-                        <span style={{ background: '#dcfce7', color: '#16a34a', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>
-                          🆓 Free
-                        </span>
+                        <span style={{ background: '#dcfce7', color: '#16a34a', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>🆓 Free</span>
+                      ) : unlocked.has(mat.id) ? (
+                        <span style={{ background: '#ede9fe', color: '#7c3aed', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>🔓 Unlocked</span>
                       ) : (
-                        <span style={{ background: '#fef3c7', color: '#d97706', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>
-                          💎 ₹{mat.price}
-                        </span>
+                        <span style={{ background: '#fef3c7', color: '#d97706', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>💎 {cost}</span>
                       )}
                     </div>
-
                     {mat.topic && (
                       <div style={{ fontSize: '11px', color: textSec, marginTop: '5px' }}>🏷️ {mat.topic}</div>
                     )}
                   </div>
 
-                  {/* Button */}
-                  {mat.is_free ? (
+                  {/* Action Button */}
+                  {isUnlocked ? (
                     <a href={mat.file_url} target="_blank" rel="noreferrer" style={{
                       background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                       color: 'white', borderRadius: '12px',
@@ -215,14 +306,32 @@ export default function MarketplacePage() {
                       Open
                     </a>
                   ) : (
-                    <button onClick={() => router.push('/premium')} style={{
-                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                      color: 'white', border: 'none', borderRadius: '12px',
-                      padding: '10px 16px', fontSize: '12px', fontWeight: '800',
-                      cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                    }}>
-                      💎 Buy
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                      {/* Diamond unlock */}
+                      <button
+                        onClick={() => handleUnlockWithDiamonds(mat)}
+                        disabled={unlocking === mat.id}
+                        style={{
+                          background: canAfford
+                            ? 'linear-gradient(135deg, #7c3aed, #4f46e5)'
+                            : '#94a3b8',
+                          color: 'white', border: 'none', borderRadius: '10px',
+                          padding: '8px 12px', fontSize: '11px', fontWeight: '800',
+                          cursor: canAfford ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {unlocking === mat.id ? '⏳' : `💎 ${cost}`}
+                      </button>
+                      {/* Money buy */}
+                      <button onClick={() => router.push('/premium')} style={{
+                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                        color: 'white', border: 'none', borderRadius: '10px',
+                        padding: '8px 12px', fontSize: '11px', fontWeight: '800',
+                        cursor: 'pointer', whiteSpace: 'nowrap',
+                      }}>
+                        ₹{mat.price || cost}
+                      </button>
+                    </div>
                   )}
                 </div>
               );

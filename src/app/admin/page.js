@@ -65,6 +65,26 @@ export default function AdminPage() {
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfUploading, setPdfUploading] = useState(false);
   const [pdfMsg, setPdfMsg] = useState(null);
+  const [materials, setMaterials] = useState([]);
+  const [matsLoading, setMatsLoading] = useState(false);
+
+  const fetchMaterials = async () => {
+    setMatsLoading(true);
+    const { data } = await supabase.from('study_materials').select('*').order('created_at', { ascending: false });
+    setMaterials(data || []);
+    setMatsLoading(false);
+  };
+
+  const deleteMaterial = async (mat) => {
+    if (!confirm(`Delete "${mat.title}"?`)) return;
+    // Delete from storage
+    if (mat.file_url) {
+      const fileName = mat.file_url.split('/').pop();
+      await supabase.storage.from('study-materials').remove([fileName]);
+    }
+    await supabase.from('study_materials').delete().eq('id', mat.id);
+    setMaterials(prev => prev.filter(m => m.id !== mat.id));
+  };
 
   const handlePdfUpload = async () => {
     if (!pdfFile || !pdfForm.title.trim()) { setPdfMsg({ type: 'error', text: 'Title ane PDF file jaruri che.' }); return; }
@@ -293,6 +313,7 @@ export default function AdminPage() {
             { key: 'bulk', label: 'Bulk Upload' },
             { key: 'single', label: 'Single Add' },
             { key: 'pdf', label: '📄 PDF' },
+            { key: 'materials', label: '🗂️ Materials' },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: tab === t.key ? 'white' : 'rgba(255,255,255,0.2)', color: tab === t.key ? '#667eea' : 'white', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
@@ -463,6 +484,33 @@ export default function AdminPage() {
               style={{ width: '100%', padding: '14px', background: pdfUploading || !pdfFile || !pdfForm.title.trim() ? '#94a3b8' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: pdfUploading || !pdfFile || !pdfForm.title.trim() ? 'not-allowed' : 'pointer' }}>
               {pdfUploading ? '⏳ Upload thaay che...' : '📤 PDF Upload Karo'}
             </button>
+          </div>
+        )}
+
+        {tab === 'materials' && (
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px' }}>
+            <div style={{ fontWeight: '800', fontSize: '16px', color: '#1e293b', marginBottom: '14px' }}>🗂️ Uploaded Materials</div>
+            <button onClick={fetchMaterials} style={{ width: '100%', padding: '10px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', marginBottom: '14px', fontSize: '14px' }}>
+              {matsLoading ? '⏳ Loading...' : '🔄 Load Materials'}
+            </button>
+            {materials.length === 0 && !matsLoading && (
+              <div style={{ textAlign: 'center', padding: '30px 0', color: '#94a3b8', fontSize: '14px' }}>Load karo — upar button dabaavo</div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {materials.map(mat => (
+                <div key={mat.id} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mat.title}</div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px' }}>
+                      {mat.subject} • {mat.material_type} • {mat.is_free ? '🆓 Free' : '💎 ₹' + mat.price}
+                    </div>
+                  </div>
+                  <button onClick={() => deleteMaterial(mat)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
+                    🗑️ Delete
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
