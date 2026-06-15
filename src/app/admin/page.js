@@ -25,6 +25,13 @@ const SUBJECTS = [
   { value: 'current_affairs', label: 'Current Affairs' },
 ];
 
+const MATERIAL_TYPES = [
+  { value: 'notes', label: 'Notes' },
+  { value: 'mind_maps', label: 'Mind Maps' },
+  { value: 'previous_year', label: 'Previous Year Papers' },
+  { value: 'practice_set', label: 'Practice Set' },
+];
+
 const SAMPLE_JSON = `[
   {
     "question": "ભારતનું બંધારણ ક્યારે અમલમાં આવ્યું?",
@@ -47,18 +54,31 @@ export default function AdminPage() {
   const [tab, setTab] = useState('bulk');
   const [stats, setStats] = useState({});
 
+  // Bulk upload state
   const [jsonText, setJsonText] = useState('');
   const [subject, setSubject] = useState('maths');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [preview, setPreview] = useState([]);
 
+  // Single add state
   const [form, setForm] = useState({
     question: '', option_a: '', option_b: '', option_c: '', option_d: '',
     correct_answer: 'A', subject: 'maths', explanation: ''
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+
+  // PDF upload state
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfTitle, setPdfTitle] = useState('');
+  const [pdfSubject, setPdfSubject] = useState('maths');
+  const [pdfTopic, setPdfTopic] = useState('');
+  const [pdfType, setPdfType] = useState('notes');
+  const [pdfIsFree, setPdfIsFree] = useState(true);
+  const [pdfPrice, setPdfPrice] = useState('');
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfMsg, setPdfMsg] = useState(null);
 
   useEffect(() => {
     const storedToken = sessionStorage.getItem('admin_token');
@@ -95,10 +115,10 @@ export default function AdminPage() {
         setPassError('');
         setPassInput('');
       } else {
-        setPassError(data.message || 'Password खोटो छे!');
+        setPassError(data.message || 'Password ખોટો છે!');
         setPassInput('');
       }
-    } catch (err) {
+    } catch {
       setPassError('Security check ma bhul thai.');
     }
   };
@@ -133,18 +153,13 @@ export default function AdminPage() {
     }
     const valid = parsed.filter(validateQuestion);
     const invalid = parsed.length - valid.length;
-    if (!valid.length) {
-      setUploadResult({ type: 'error', msg: 'Koi valid question nathi!' });
-      return;
-    }
+    if (!valid.length) { setUploadResult({ type: 'error', msg: 'Koi valid question nathi!' }); return; }
     setUploading(true);
     setUploadResult({ type: 'loading', msg: `${valid.length} questions upload thai raha che...` });
     const toInsert = valid.map(q => ({
-      question: q.question.trim(),
-      option_a: q.option_a.trim(), option_b: q.option_b.trim(),
+      question: q.question.trim(), option_a: q.option_a.trim(), option_b: q.option_b.trim(),
       option_c: q.option_c.trim(), option_d: q.option_d.trim(),
-      correct_answer: q.correct_answer.toUpperCase(),
-      subject: q.subject || subject,
+      correct_answer: q.correct_answer.toUpperCase(), subject: q.subject || subject,
       explanation: q.explanation?.trim() || '',
     }));
     let successCount = 0;
@@ -153,10 +168,7 @@ export default function AdminPage() {
       if (!error) successCount += Math.min(50, toInsert.length - i);
     }
     setUploading(false);
-    setUploadResult({
-      type: 'success',
-      msg: `${successCount} questions add thai gaya!${invalid > 0 ? ` (${invalid} skip)` : ''}`
-    });
+    setUploadResult({ type: 'success', msg: `${successCount} questions add thai gaya!${invalid > 0 ? ` (${invalid} skip)` : ''}` });
     if (successCount > 0) { setJsonText(''); setPreview([]); }
     const { count } = await supabase.from('questions').select('*', { count: 'exact', head: true }).eq('subject', subject);
     setStats(p => ({ ...p, [subject]: count || 0 }));
@@ -176,40 +188,76 @@ export default function AdminPage() {
     }
   };
 
+  const handlePdfUpload = async () => {
+    if (!pdfFile || !pdfTitle.trim()) {
+      setPdfMsg({ type: 'error', text: 'File ane Title jaruri che!' });
+      return;
+    }
+    setPdfUploading(true);
+    setPdfMsg({ type: 'loading', text: 'PDF upload thai rahu che...' });
+
+    try {
+      // Upload directly to Supabase Storage
+      const fileName = `${Date.now()}_${pdfFile.name.replace(/\s+/g, '_')}`;
+      const filePath = `${pdfSubject}/${fileName}`;
+
+      const { error: storageError } = await supabase.storage
+        .from('study-materials')
+        .upload(filePath, pdfFile, { contentType: pdfFile.type, upsert: false });
+
+      if (storageError) {
+        setPdfMsg({ type: 'error', text: 'Storage error: ' + storageError.message });
+        setPdfUploading(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('study-materials')
+        .getPublicUrl(filePath);
+
+      // Save to DB
+      const { error: dbError } = await supabase.from('study_materials').insert({
+        title: pdfTitle.trim(),
+        subject: pdfSubject,
+        topic: pdfTopic.trim(),
+        topic_id: pdfTopic.trim().toLowerCase().replace(/\s+/g, '_') || pdfSubject,
+        material_type: pdfType,
+        file_url: urlData.publicUrl,
+        file_type: pdfFile.type,
+        is_free: pdfIsFree,
+        price: pdfIsFree ? 0 : parseFloat(pdfPrice || '0'),
+      });
+
+      if (dbError) {
+        setPdfMsg({ type: 'error', text: 'DB error: ' + dbError.message });
+      } else {
+        setPdfMsg({ type: 'success', text: `"${pdfTitle}" successfully upload thai gayo!` });
+        setPdfFile(null); setPdfTitle(''); setPdfTopic(''); setPdfPrice(''); setPdfIsFree(true);
+      }
+    } catch (err) {
+      setPdfMsg({ type: 'error', text: err.message });
+    }
+    setPdfUploading(false);
+  };
+
   if (!authed) return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'system-ui' }}>
       <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '380px', width: '100%', boxShadow: '0 25px 60px rgba(0,0,0,0.4)', textAlign: 'center' }}>
         <div style={{ fontSize: '56px', marginBottom: '12px' }}>🔐</div>
         <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#1e1b4b', margin: '0 0 6px' }}>Admin Access</h1>
         <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '28px' }}>ExamBuddy Secret Panel</p>
-        {passError && (
-          <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', fontWeight: '600' }}>
-            {passError}
-          </div>
-        )}
+        {passError && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', fontWeight: '600' }}>{passError}</div>}
         <div style={{ position: 'relative', marginBottom: '16px' }}>
-          <input
-            type={showPass ? 'text' : 'password'}
-            value={passInput}
-            onChange={e => setPassInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            placeholder="Admin password..."
-            style={{ width: '100%', padding: '14px 48px 14px 16px', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '16px', outline: 'none', boxSizing: 'border-box' }}
-            autoFocus
-          />
-          <button onClick={() => setShowPass(p => !p)}
-            style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>
+          <input type={showPass ? 'text' : 'password'} value={passInput}
+            onChange={e => setPassInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            placeholder="Admin password..." autoFocus
+            style={{ width: '100%', padding: '14px 48px 14px 16px', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '16px', outline: 'none', boxSizing: 'border-box' }} />
+          <button onClick={() => setShowPass(p => !p)} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>
             {showPass ? '🙈' : '👁️'}
           </button>
         </div>
-        <button onClick={handleLogin}
-          style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginBottom: '12px' }}>
-          Login
-        </button>
-        <button onClick={() => router.push('/')}
-          style={{ width: '100%', padding: '12px', background: 'transparent', color: '#6b7280', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
-          Home
-        </button>
+        <button onClick={handleLogin} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginBottom: '12px' }}>Login</button>
+        <button onClick={() => router.push('/')} style={{ width: '100%', padding: '12px', background: 'transparent', color: '#6b7280', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>Home</button>
       </div>
     </div>
   );
@@ -223,12 +271,9 @@ export default function AdminPage() {
         <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', borderRadius: '20px', padding: '18px 24px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: '900', margin: 0 }}>Admin Panel</h1>
-            <p style={{ opacity: 0.8, margin: '2px 0 0', fontSize: '13px' }}>ExamBuddy Question Manager - {totalQ} total questions</p>
+            <p style={{ opacity: 0.8, margin: '2px 0 0', fontSize: '13px' }}>ExamBuddy Manager — {totalQ} questions</p>
           </div>
-          <button onClick={handleLogout}
-            style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '2px solid rgba(255,255,255,0.4)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontWeight: '700' }}>
-            Logout
-          </button>
+          <button onClick={handleLogout} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '2px solid rgba(255,255,255,0.4)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontWeight: '700' }}>Logout</button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
@@ -260,24 +305,26 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
           {[
-            { key: 'bulk', label: 'Bulk Upload' },
-            { key: 'single', label: 'Single Add' },
+            { key: 'bulk', label: '📋 Bulk Upload' },
+            { key: 'single', label: '➕ Single Add' },
+            { key: 'pdf', label: '📄 PDF Upload' },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: tab === t.key ? 'white' : 'rgba(255,255,255,0.2)', color: tab === t.key ? '#667eea' : 'white', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
+              style={{ flex: 1, padding: '12px 8px', borderRadius: '12px', border: 'none', background: tab === t.key ? 'white' : 'rgba(255,255,255,0.2)', color: tab === t.key ? '#667eea' : 'white', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>
               {t.label}
             </button>
           ))}
         </div>
 
+        {/* Bulk Upload Tab */}
         {tab === 'bulk' && (
           <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Default Subject</label>
-              <select value={subject} onChange={e => setSubject(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
+              <select value={subject} onChange={e => setSubject(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
                 {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
@@ -285,16 +332,12 @@ export default function AdminPage() {
               <div style={{ fontWeight: '700', color: '#166534', fontSize: '12px', marginBottom: '6px' }}>JSON Format:</div>
               <pre style={{ fontSize: '11px', color: '#374151', margin: 0, overflowX: 'auto' }}>{`[{"question":"...","option_a":"...","option_b":"...","option_c":"...","option_d":"...","correct_answer":"A","subject":"maths","explanation":"..."}]`}</pre>
             </div>
-            <button onClick={() => handleJsonChange(SAMPLE_JSON)}
-              style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '2px dashed #94a3b8', borderRadius: '10px', color: '#64748b', fontWeight: '700', cursor: 'pointer', fontSize: '13px', marginBottom: '14px' }}>
-              Sample Load
-            </button>
-            <textarea value={jsonText} onChange={e => handleJsonChange(e.target.value)}
-              placeholder='[ { "question": "...", ... } ]'
+            <button onClick={() => handleJsonChange(SAMPLE_JSON)} style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '2px dashed #94a3b8', borderRadius: '10px', color: '#64748b', fontWeight: '700', cursor: 'pointer', fontSize: '13px', marginBottom: '14px' }}>Sample Load</button>
+            <textarea value={jsonText} onChange={e => handleJsonChange(e.target.value)} placeholder='[ { "question": "...", ... } ]'
               style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', minHeight: '150px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace', marginBottom: '14px' }} />
             {preview.length > 0 && (
               <div style={{ background: '#eff6ff', border: '2px solid #bfdbfe', borderRadius: '12px', padding: '12px', marginBottom: '14px' }}>
-                <div style={{ fontWeight: '700', color: '#1d4ed8', fontSize: '12px', marginBottom: '8px' }}>Preview ({preview.length} questions):</div>
+                <div style={{ fontWeight: '700', color: '#1d4ed8', fontSize: '12px', marginBottom: '8px' }}>Preview ({preview.length}):</div>
                 {preview.map((q, i) => (
                   <div key={i} style={{ background: 'white', borderRadius: '8px', padding: '8px', marginBottom: '6px', fontSize: '12px' }}>
                     <div style={{ fontWeight: '700', color: '#1e1b4b' }}>Q{i + 1}: {q.question?.substring(0, 70)}...</div>
@@ -315,51 +358,133 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Single Add Tab */}
         {tab === 'single' && (
           <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
-            {msg && (
-              <div style={{ background: msg.includes('save') ? '#dcfce7' : '#fee2e2', color: msg.includes('save') ? '#166534' : '#dc2626', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontWeight: '600', fontSize: '14px' }}>
-                {msg}
-              </div>
-            )}
+            {msg && <div style={{ background: msg.includes('save') ? '#dcfce7' : '#fee2e2', color: msg.includes('save') ? '#166534' : '#dc2626', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontWeight: '600', fontSize: '14px' }}>{msg}</div>}
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Subject</label>
-              <select value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
+              <select value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
                 {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Question</label>
-              <textarea value={form.question} onChange={e => setForm({ ...form, question: e.target.value })}
-                placeholder="Question..."
+              <textarea value={form.question} onChange={e => setForm({ ...form, question: e.target.value })} placeholder="Question..."
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '80px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
             </div>
             {['A', 'B', 'C', 'D'].map(opt => (
               <div key={opt} style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '4px', fontSize: '12px' }}>Option {opt}</label>
-                <input value={form[`option_${opt.toLowerCase()}`]}
-                  onChange={e => setForm({ ...form, [`option_${opt.toLowerCase()}`]: e.target.value })}
-                  placeholder={`Option ${opt}`}
+                <input value={form[`option_${opt.toLowerCase()}`]} onChange={e => setForm({ ...form, [`option_${opt.toLowerCase()}`]: e.target.value })} placeholder={`Option ${opt}`}
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `2px solid ${opt === form.correct_answer ? '#86efac' : '#e5e7eb'}`, fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             ))}
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Correct Answer</label>
-              <select value={form.correct_answer} onChange={e => setForm({ ...form, correct_answer: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #86efac', fontSize: '15px', outline: 'none' }}>
+              <select value={form.correct_answer} onChange={e => setForm({ ...form, correct_answer: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #86efac', fontSize: '15px', outline: 'none' }}>
                 {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>Option {o}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '18px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Explanation (optional)</label>
-              <textarea value={form.explanation} onChange={e => setForm({ ...form, explanation: e.target.value })}
-                placeholder="Explanation..."
+              <textarea value={form.explanation} onChange={e => setForm({ ...form, explanation: e.target.value })} placeholder="Explanation..."
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '60px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
             </div>
             <button onClick={handleSave} disabled={saving}
               style={{ width: '100%', padding: '14px', background: saving ? '#94a3b8' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: saving ? 'not-allowed' : 'pointer' }}>
               {saving ? 'Saving...' : 'Save Question'}
+            </button>
+          </div>
+        )}
+
+        {/* PDF Upload Tab */}
+        {tab === 'pdf' && (
+          <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+            <div style={{ fontWeight: '800', color: '#1e1b4b', marginBottom: '16px', fontSize: '16px' }}>📄 Study Material Upload</div>
+
+            {pdfMsg && (
+              <div style={{ background: pdfMsg.type === 'success' ? '#dcfce7' : pdfMsg.type === 'error' ? '#fee2e2' : '#fffbeb', color: pdfMsg.type === 'success' ? '#166534' : pdfMsg.type === 'error' ? '#dc2626' : '#92400e', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontWeight: '600', fontSize: '14px' }}>
+                {pdfMsg.text}
+              </div>
+            )}
+
+            {/* File picker */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📎 PDF File Select karo *</label>
+              <div style={{ border: '2px dashed #c7d2fe', borderRadius: '12px', padding: '20px', textAlign: 'center', background: pdfFile ? '#f0fdf4' : '#f8faff', cursor: 'pointer' }}
+                onClick={() => document.getElementById('pdf-file-input').click()}>
+                {pdfFile ? (
+                  <div>
+                    <div style={{ fontSize: '24px' }}>✅</div>
+                    <div style={{ fontWeight: '700', color: '#166534', fontSize: '13px', marginTop: '4px' }}>{pdfFile.name}</div>
+                    <div style={{ color: '#6b7280', fontSize: '11px' }}>{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '32px' }}>📄</div>
+                    <div style={{ color: '#6366f1', fontWeight: '700', fontSize: '13px', marginTop: '4px' }}>Click karo to select PDF</div>
+                    <div style={{ color: '#9ca3af', fontSize: '11px' }}>PDF, PNG, JPG supported</div>
+                  </div>
+                )}
+              </div>
+              <input id="pdf-file-input" type="file" accept=".pdf,.png,.jpg,.jpeg"
+                onChange={e => { if (e.target.files[0]) setPdfFile(e.target.files[0]); }}
+                style={{ display: 'none' }} />
+            </div>
+
+            {/* Title */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📝 Title *</label>
+              <input value={pdfTitle} onChange={e => setPdfTitle(e.target.value)} placeholder="e.g. ઇતિહાસ Chapter 1 Notes"
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: '#1e293b' }} />
+            </div>
+
+            {/* Subject + Type */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📚 Subject *</label>
+                <select value={pdfSubject} onChange={e => setPdfSubject(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', outline: 'none' }}>
+                  {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>📂 Type</label>
+                <select value={pdfType} onChange={e => setPdfType(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', outline: 'none' }}>
+                  {MATERIAL_TYPES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Topic */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>🏷️ Topic (optional)</label>
+              <input value={pdfTopic} onChange={e => setPdfTopic(e.target.value)} placeholder="e.g. Mughal Empire, Human Body..."
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: '#1e293b' }} />
+            </div>
+
+            {/* Free / Paid */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '8px', fontSize: '13px' }}>💰 Free ke Paid?</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => setPdfIsFree(true)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${pdfIsFree ? '#10b981' : '#e5e7eb'}`, background: pdfIsFree ? '#dcfce7' : 'white', color: pdfIsFree ? '#166534' : '#6b7280', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                  ✅ Free
+                </button>
+                <button onClick={() => setPdfIsFree(false)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${!pdfIsFree ? '#f59e0b' : '#e5e7eb'}`, background: !pdfIsFree ? '#fffbeb' : 'white', color: !pdfIsFree ? '#92400e' : '#6b7280', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                  💎 Paid
+                </button>
+              </div>
+              {!pdfIsFree && (
+                <input type="number" value={pdfPrice} onChange={e => setPdfPrice(e.target.value)} placeholder="Price in ₹ (e.g. 49)"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #f59e0b', fontSize: '14px', outline: 'none', boxSizing: 'border-box', marginTop: '10px', color: '#1e293b' }} />
+              )}
+            </div>
+
+            <button onClick={handlePdfUpload} disabled={pdfUploading || !pdfFile || !pdfTitle.trim()}
+              style={{ width: '100%', padding: '14px', background: pdfUploading || !pdfFile || !pdfTitle.trim() ? '#94a3b8' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: pdfUploading || !pdfFile || !pdfTitle.trim() ? 'not-allowed' : 'pointer' }}>
+              {pdfUploading ? '⏳ Uploading...' : '🚀 Upload Material'}
             </button>
           </div>
         )}
