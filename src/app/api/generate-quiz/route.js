@@ -3,7 +3,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gujarati fallback questions (API fail thaay to)
 const FALLBACK = {
   questions: [
     {
@@ -32,11 +31,12 @@ export async function POST(req) {
     const contentType = req.headers.get('content-type') || '';
     const apiKey = process.env.GEMINI_API_KEY;
 
+    if (!apiKey) return NextResponse.json(FALLBACK);
+
     let textContent = '';
     let imageBase64 = null;
     let imageMimeType = null;
 
-    // ─── Image / PDF થી content extract ───────────────────────────
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       const file = formData.get('file');
@@ -47,9 +47,8 @@ export async function POST(req) {
       const buffer = Buffer.from(await file.arrayBuffer());
 
       if (mimeType === 'application/pdf') {
-        // PDF → text extract
         try {
-          const pdfParse = (await import('pdf-parse'));;
+          const pdfParse = (await import('pdf-parse'));
           const pdfData = await pdfParse(buffer);
           textContent = pdfData.text?.slice(0, 3000) || '';
         } catch (e) {
@@ -57,18 +56,13 @@ export async function POST(req) {
           return NextResponse.json(FALLBACK);
         }
       } else if (mimeType.startsWith('image/')) {
-        // Image → base64 (Gemini vision use karshun)
         imageBase64 = buffer.toString('base64');
         imageMimeType = mimeType;
       }
     } else {
-      // JSON body (text-only, old flow)
       const body = await req.json();
       textContent = body.textContent || '';
     }
-
-    // ─── API key nathi to fallback ─────────────────────────────────
-    if (!apiKey) return NextResponse.json(FALLBACK);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
@@ -92,27 +86,20 @@ JSON structure:
     let result;
 
     if (imageBase64 && imageMimeType) {
-      // ─── Vision mode: Image → Quiz ──────────────────────────────
-      // TEXT MODE:
-result = await model.generateContent(
-  `${gujaratiInstruction}\n\nઆ text ના આધારે 10 MCQ questions બનાવો. દરેક question unique ane exam-relevant hoy. Mandatory: explanation field khali na rakho:\n"${textContent.slice(0, 4000)}"\n\nFaqt JSON apo.`
-);
-
-// IMAGE/VISION MODE:
-result = await model.generateContent([
-  { inlineData: { mimeType: imageMimeType, data: imageBase64 } },
-  { text: `${gujaratiInstruction}\n\nAa image na content mathi 10 MCQ questions banavo. explanation mandatory che. Faqt JSON apo.` },
-]);
+      // IMAGE mode — Gemini Vision
+      result = await model.generateContent([
+        { inlineData: { mimeType: imageMimeType, data: imageBase64 } },
+        { text: `${gujaratiInstruction}\n\nAa image na content mathi 10 MCQ questions banavo. explanation mandatory che. Faqt JSON apo.` },
+      ]);
     } else if (textContent.trim().length > 10) {
-      // ─── Text mode: PDF text / custom text → Quiz ───────────────
+      // PDF / Text mode
       result = await model.generateContent(
-        `${gujaratiInstruction}\n\nઆ text ના આધારે ૩ MCQ questions બનાવો:\n"${textContent.slice(0, 2500)}"\n\nફક્ત JSON આપો.`
+        `${gujaratiInstruction}\n\nઆ text ના આધારે 10 MCQ questions બનાવો. દરેક question unique ane exam-relevant hoy. explanation field khali na rakho:\n"${textContent.slice(0, 3000)}"\n\nFaqt JSON apo.`
       );
     } else {
       return NextResponse.json(FALLBACK);
     }
 
-    // ─── Response parse ────────────────────────────────────────────
     let raw = result.response.text().trim();
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
@@ -120,7 +107,6 @@ result = await model.generateContent([
 
     const data = JSON.parse(raw);
 
-    // Validate
     if (!data.questions || data.questions.length === 0) {
       return NextResponse.json(FALLBACK);
     }
