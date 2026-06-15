@@ -15,6 +15,13 @@ const subjects = [
   { id: 'polity', icon: '🏛️', name: 'રાજ્યશાસ્ત્ર', color: '#6366f1' },
   { id: 'economics', icon: '📊', name: 'અર્થશાસ્ત્ર', color: '#84cc16' },
   { id: 'computer', icon: '💻', name: 'કોમ્પ્યુટર', color: '#06b6d4' },
+  // New subjects
+  { id: 'reasoning', icon: '🧠', name: 'તર્કશક્તિ', color: '#a855f7' },
+  { id: 'gujarati-sahitya', icon: '✍️', name: 'ગુ. સાહિત્ય', color: '#f43f5e' },
+  { id: 'gujarati-vyakran', icon: '📝', name: 'ગુ. વ્યાકરણ', color: '#ec4899' },
+  { id: 'law', icon: '⚖️', name: 'કાયદો', color: '#0ea5e9' },
+  { id: 'heritage', icon: '🏰', name: 'વારસો & સંસ્કૃતિ', color: '#d97706' },
+  { id: 'pub-ad', icon: '🏛️', name: 'જાહેર વહીવટ', color: '#10b981' },
 ];
 
 export default function QuizPage() {

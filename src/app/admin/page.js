@@ -4,25 +4,25 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
-const SUBJECTS = [
-  { value: 'maths', label: 'ગણિત' },
-  { value: 'constitution', label: 'બંધારણ' },
-  { value: 'history', label: 'ઇતિહાસ' },
-  { value: 'geography', label: 'ભૂગોળ' },
-  { value: 'science', label: 'વિજ્ઞાન' },
-  { value: 'gujarati', label: 'ગુજરાતી' },
-  { value: 'computer', label: 'કમ્પ્યૂટર' },
-  { value: 'reasoning', label: 'રીઝનિંગ' },
-  { value: 'english', label: 'English' },
-  { value: 'current-affairs', label: 'કરંટ અફેર્સ' },
-  { value: 'gujarati_sahitya', label: 'ગુજરાતી સાહિત્ય' },
-  { value: 'gujarati_vyakran', label: 'ગુજરાતી વ્યાકરણ' },
-  { value: 'law', label: 'કાયદો' },
-  { value: 'gk', label: 'સામાન્ય જ્ઞાન' },
-  { value: 'economics', label: 'અર્થશાસ્ત્ર' },
-  { value: 'heritage', label: 'સાંસ્કૃતિક વારસો' },
-  { value: 'pub_ad', label: 'જાહેર વહીવટ' },
-  { value: 'current_affairs', label: 'Current Affairs' },
+const subjects = [
+  { id: 'maths',             icon: '🔢', name: 'ગણિત',              color: '#6366f1' },
+  { id: 'constitution',      icon: '📜', name: 'બંધારણ',            color: '#8b5cf6' },
+  { id: 'history',           icon: '🏛️', name: 'ઇતિહાસ',           color: '#ec4899' },
+  { id: 'geography',         icon: '🌍', name: 'ભૂગોળ',             color: '#14b8a6' },
+  { id: 'science',           icon: '🔬', name: 'વિજ્ઞાન',           color: '#f59e0b' },
+  { id: 'gujarati',          icon: '🗣️', name: 'ગુજરાતી',           color: '#10b981' },
+  { id: 'english',           icon: '📖', name: 'English',            color: '#3b82f6' },
+  { id: 'current_affairs',   icon: '📰', name: 'કરંટ અફેર્સ',       color: '#ef4444' },
+  { id: 'gk',                icon: '💡', name: 'સામાન્ય જ્ઞાન',     color: '#f97316' },
+  { id: 'economics',         icon: '📊', name: 'અર્થશાસ્ત્ર',       color: '#84cc16' },
+  { id: 'computer',          icon: '💻', name: 'કોમ્પ્યુટર',         color: '#06b6d4' },
+  { id: 'reasoning',         icon: '🧠', name: 'તર્કશક્તિ',          color: '#a855f7' },
+  { id: 'gujarati_vyakran',  icon: '📝', name: 'ગુ. વ્યાકરણ',       color: '#ec4899' },
+  { id: 'gujarati_sahitya',  icon: '✍️', name: 'ગુ. સાહિત્ય',       color: '#f43f5e' },
+  { id: 'law',               icon: '⚖️', name: 'કાયદો',              color: '#0ea5e9' },
+  { id: 'heritage',          icon: '🏰', name: 'સાંસ્કૃતિક વારસો',  color: '#d97706' },
+  { id: 'pub_ad',            icon: '🏛️', name: 'જાહેર વહીવટ',      color: '#10b981' },
+  { id: 'polity',            icon: '🗳️', name: 'રાજ્યશાસ્ત્ર',      color: '#6366f1' },
 ];
 
 const SAMPLE_JSON = `[
