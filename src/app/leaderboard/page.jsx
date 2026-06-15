@@ -36,9 +36,10 @@ export default function LeaderboardPage() {
 
     // Fetch all quiz history
     const { data: allHistory } = await supabase
-      .from('quiz_history')
-      .select('user_id, score, total, subject_name')
-      .order('created_at', { ascending: false });
+  .from('quiz_history')
+  .select('user_id, score, total, subject_name')
+  .order('created_at', { ascending: false })
+  .limit(500);
 
     if (!allHistory || allHistory.length === 0) {
       setLeaders([]);

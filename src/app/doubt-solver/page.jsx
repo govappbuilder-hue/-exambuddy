@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
 const QUICK_TOPICS = [
@@ -23,10 +24,16 @@ export default function DoubtSolverPage() {
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
   const bottomRef = useRef(null);
 
   // 1. લોકલ સ્ટોરેજમાંથી જૂની ચેટ હિસ્ટ્રી લોડ કરવા માટે (ફક્ત ક્લાયન્ટ સાઇડ પર)
   useEffect(() => {
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    setUser(user);
+  });
+}, []);
+useEffect(() => {
     const savedChats = localStorage.getItem('exambuddy_chat_history');
     if (savedChats) {
       try {
@@ -68,8 +75,9 @@ export default function DoubtSolverPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question,
-          history: updatedMessagesWithUser.slice(-6), // સચોટ કોન્ટેક્સ્ટ માટે છેલ્લે અપડેટ થયેલી હિસ્ટ્રી મોકલો
+  question,
+  history: updatedMessagesWithUser.slice(-6),
+  userId: user?.id,
         }),
       });
       

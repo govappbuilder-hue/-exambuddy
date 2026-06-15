@@ -1,13 +1,37 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export async function POST(request) {
   try {
     const apiKey = process.env.GROQ_API_KEY || "";
-    const { question, history } = await request.json();
+    const { question, history, userId } = await request.json();
 
     if (!question) {
       return Response.json({ error: "No question provided" }, { status: 400 });
     }
     if (!apiKey) {
       return Response.json({ error: "GROQ API key missing" }, { status: 500 });
+    }
+
+    // ✅ Auth + Premium Check
+    if (!userId) {
+      return Response.json({ error: "Login karvo jaroori che" }, { status: 401 });
+    }
+
+    const { data: premium } = await supabase
+      .from('user_premium')
+      .select('is_active, expires_at')
+      .eq('user_id', userId)
+      .single();
+
+    const isPremium = premium?.is_active && new Date(premium.expires_at) > new Date();
+
+    if (!isPremium) {
+      return Response.json({ error: "PREMIUM_REQUIRED" }, { status: 403 });
     }
 
     const contextMessages = history
@@ -30,7 +54,7 @@ export async function POST(request) {
         messages: [
           {
             role: "system",
-           content: `You are ExamBuddy AI, a specialist doubt solver for Gujarat Government exam students.
+            content: `You are ExamBuddy AI, a specialist doubt solver for Gujarat Government exam students.
 Target exams: GPSC Class 1-2, GPSC Class 3, PSI/ASI, Talati, Bin Sachivalay, GSSSB, Head Clerk, Revenue Talati, Forest Guard, Constable, Nayab Mamlatdar, DYSO.
 
 Rules:
@@ -40,7 +64,7 @@ Rules:
 - Give exam-specific tips (mention which Gujarat exam this topic appears in)
 - Keep answers under 300 words
 - End with: "📌 Exam Tip:" relevant to Gujarat gov exams
-- For Maths/Reasoning, show step-by-step solution`, 
+- For Maths/Reasoning, show step-by-step solution`,
           },
           ...contextMessages,
           { role: "user", content: question },

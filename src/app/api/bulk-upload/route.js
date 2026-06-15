@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // ૧. સુપાબેઝ એડમિન ક્લાયન્ટ સેટઅપ (જેથી મોટો ડેટા ઇન્સર્ટ કરવામાં પ્રોબ્લેમ ન નડે)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseAdmin = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET() {
   try {
