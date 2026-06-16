@@ -17,6 +17,7 @@ export async function POST(request) {
       plan,
     } = await request.json();
 
+    // Signature verify
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -27,10 +28,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    const expiresAt = plan === 'yearly'
-      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    // Plan expiry calculate karo
+    const now = Date.now();
+    const expiryMap = {
+      adfree:      30  * 24 * 60 * 60 * 1000,
+      marketplace: 30  * 24 * 60 * 60 * 1000,
+      monthly:     30  * 24 * 60 * 60 * 1000,
+      halfyearly:  180 * 24 * 60 * 60 * 1000,
+      yearly:      365 * 24 * 60 * 60 * 1000,
+    };
 
+    const expiresAt = new Date(now + (expiryMap[plan] || expiryMap.monthly));
+
+    // Supabase ma save karo
     await supabase.from('user_premium').upsert({
       user_id: userId,
       plan,

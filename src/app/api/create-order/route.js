@@ -11,14 +11,17 @@ export async function POST(request) {
     const { plan } = await request.json();
 
     const plans = {
-      monthly: { amount: 9900, description: 'ExamBuddy Premium - 1 Month' },
-      yearly:  { amount: 79900, description: 'ExamBuddy Premium - 1 Year' },
+      adfree:      { amount: 2000,  description: 'ExamBuddy Ad-Free - 1 Month' },
+      marketplace: { amount: 4900,  description: 'ExamBuddy Marketplace - 1 Month' },
+      monthly:     { amount: 9900,  description: 'ExamBuddy Premium - 1 Month' },
+      halfyearly:  { amount: 49900, description: 'ExamBuddy Premium - 6 Months' },
+      yearly:      { amount: 79900, description: 'ExamBuddy Premium - 1 Year' },
     };
 
     const selected = plans[plan] || plans.monthly;
 
     const order = await razorpay.orders.create({
-      amount: selected.amount, // paise ma (99 * 100 = 9900)
+      amount: selected.amount,
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
       notes: { plan, description: selected.description },
