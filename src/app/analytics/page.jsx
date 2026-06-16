@@ -218,3 +218,4 @@ setStats({ totalPlayed: 0, avgScore: '0' });
     </div>
   );
 }
+
