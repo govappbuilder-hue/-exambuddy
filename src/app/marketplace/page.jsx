@@ -66,9 +66,20 @@ export default function MarketplacePage() {
   const textSec     = dark ? '#94a3b8' : '#64748b';
 
   useEffect(() => {
-    fetchAll();
-    loadUser();
-  }, []);
+  fetchAll();
+  loadUser();
+}, []);
+
+// Tab switch પછી પાછા આવો ત્યારે re-fetch
+useEffect(() => {
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') {
+      loadUser();
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibility);
+  return () => document.removeEventListener('visibilitychange', handleVisibility);
+}, []);
 
   const loadUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
