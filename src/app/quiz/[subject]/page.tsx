@@ -58,15 +58,18 @@ export default function QuizPage({ params }: PageProps) {
   const [loading, setLoading] = useState(false);
 
   // ── BOOKMARK STATE ──
-  const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
-  const [userId, setUserId] = useState<string | null>(null);
+  // ── BOOKMARK STATE ──
+const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
+const [userId, setUserId] = useState<string | null>(null);
+const [diamondsEarned, setDiamondsEarned] = useState(0);   // ✅ બહાર
+const [totalDiamonds, setTotalDiamonds] = useState(0);     // ✅ બહાર
 
-  // ── GET USER ID ON MOUNT ──
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setUserId(user.id);
-    });
-  }, []);
+// ── GET USER ID ON MOUNT ──
+useEffect(() => {
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    if (user) setUserId(user.id);
+  });
+}, []);
 
   // ── TOGGLE BOOKMARK ──
   const toggleBookmark = async (questionId: string) => {
@@ -112,24 +115,48 @@ export default function QuizPage({ params }: PageProps) {
   };
 
   const submitQuiz = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const rawScore = questions.reduce((acc, q, i) => {
-        if (selected[i] === q.correct_answer) return acc + 1;
-        if (negativeMarking && selected[i] !== undefined) return acc - 0.25;
-        return acc;
-      }, 0);
-      const finalScore = Math.max(0, Math.round(rawScore * 100) / 100);
-      await supabase.from('quiz_history').insert({
-        user_id: user.id,
-        subject_name: SUBJECT_NAMES[subject] || subject,
-        score: finalScore,
-        total: questions.length,
-        created_at: new Date().toISOString(),
-      });
-    }
-    setScreen('result');
-  }, [questions, selected, subject]);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const rawScore = questions.reduce((acc, q, i) => {
+      if (selected[i] === q.correct_answer) return acc + 1;
+      if (negativeMarking && selected[i] !== undefined) return acc - 0.25;
+      return acc;
+    }, 0);
+    const finalScore = Math.max(0, Math.round(rawScore * 100) / 100);
+
+    // ── DIAMOND EARNING LOGIC ──
+    const correctCount = questions.reduce((acc, q, i) =>
+      selected[i] === q.correct_answer ? acc + 1 : acc, 0);
+    const pct = questions.length ? Math.round((correctCount / questions.length) * 100) : 0;
+    const bonusDiamonds = pct >= 80 ? 5 : 0;
+    const earnedDiamonds = correctCount + bonusDiamonds;
+
+    const { data: dData } = await supabase
+      .from('user_diamonds')
+      .select('diamonds')
+      .eq('user_id', user.id)
+      .single();
+    const currentDiamonds = dData?.diamonds || 0;
+    const newTotal = currentDiamonds + earnedDiamonds;
+
+    await supabase.from('user_diamonds').upsert({
+      user_id: user.id,
+      diamonds: newTotal,
+    });
+
+   setDiamondsEarned(earnedDiamonds);
+    setTotalDiamonds(newTotal);
+
+    await supabase.from('quiz_history').insert({
+      user_id: user.id,
+      subject_name: SUBJECT_NAMES[subject] || subject,
+      score: finalScore,
+      total: questions.length,
+      created_at: new Date().toISOString(),
+    });
+  }
+  setScreen('result');
+}, [questions, selected, subject, negativeMarking]);
 
   useEffect(() => {
     if (screen !== 'quiz') return;
@@ -332,9 +359,35 @@ export default function QuizPage({ params }: PageProps) {
             <div style={{ fontSize: '44px', fontWeight: '900', color: percent >= 60 ? '#10b981' : '#ef4444', margin: '14px 0 6px' }}>
               {finalDisplayScore}/{questions.length}
             </div>
-            <div style={{ fontSize: '18px', color: '#6b7280', marginBottom: '20px' }}>{percent}% સાચા</div>
+            <div style={{ fontSize: '18px', color: '#6b7280', marginBottom: '16px' }}>{percent}% સાચા</div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '22px' }}>
+{/* ── DIAMONDS EARNED CARD ── */}
+{diamondsEarned > 0 && (
+  <div style={{
+    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+    borderRadius: '16px', padding: '14px 20px',
+    marginBottom: '16px', color: 'white',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  }}>
+    <div style={{ textAlign: 'left' }}>
+      <div style={{ fontSize: '13px', opacity: 0.85, marginBottom: '2px' }}>આ Quiz થી Diamonds મળ્યા 🎉</div>
+      <div style={{ fontSize: '22px', fontWeight: '900' }}>
+        +💎 {diamondsEarned}
+        {percent >= 80 && (
+          <span style={{ fontSize: '13px', marginLeft: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px', padding: '2px 8px' }}>
+            +5 Bonus (80%+)
+          </span>
+        )}
+      </div>
+    </div>
+    <div style={{ textAlign: 'right' }}>
+      <div style={{ fontSize: '11px', opacity: 0.75 }}>કુલ Balance</div>
+      <div style={{ fontSize: '20px', fontWeight: '900' }}>💎 {totalDiamonds}</div>
+    </div>
+  </div>
+)}
+
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '22px' }}>
               {[
                 { val: score, label: '✅ સાચા', bg: '#dcfce7', color: '#166534' },
                 { val: wrong, label: '❌ ખોટા', bg: '#fee2e2', color: '#991b1b' },
