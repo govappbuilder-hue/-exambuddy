@@ -40,7 +40,6 @@ export default function AnalyticsPage() {
         }));
         setChartData(formattedData);
 
-        // Weakness analytics — subject wise avg score
         const subMap = {};
         data.forEach(item => {
           const sub = item.subject_name || 'other';
@@ -53,14 +52,8 @@ export default function AnalyticsPage() {
           name,
           avg: Math.round((v.correct / v.total) * 100),
           attempts: v.count,
-        })).sort((a, b) => a.avg - b.avg); // weakest first
+        })).sort((a, b) => a.avg - b.avg);
         setWeakSubjects(subList);
-        // આ 7 lines delete કરી:
-setChartData([
-  { name: 'Test 1', score: 40 },
-  ...
-]);
-setStats({ totalPlayed: 0, avgScore: '0' });
       }
       setLoading(false);
     };
@@ -88,7 +81,6 @@ setStats({ totalPlayed: 0, avgScore: '0' });
         </h1>
         <p style={{ color: '#6b7280', marginBottom: '30px' }}>તમારી અત્યાર સુધીની ક્વિઝ પ્રગતિનો અહેવાલ</p>
 
-        {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
           <div style={{ background: 'white', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
             <span style={{ fontSize: '24px' }}>📝</span>
@@ -106,7 +98,6 @@ setStats({ totalPlayed: 0, avgScore: '0' });
           </div>
         </div>
 
-        {/* Chart */}
         <div style={{ background: 'white', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '24px', marginBottom: '30px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '20px' }}>
             📈 પરફોર્મન્સ ટ્રેન્ડ
@@ -135,7 +126,6 @@ setStats({ totalPlayed: 0, avgScore: '0' });
           </div>
         </div>
 
-        {/* Weakness Analytics */}
         {weakSubjects.length > 0 && (
           <div style={{ background: 'white', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '24px', marginBottom: '30px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
@@ -168,7 +158,6 @@ setStats({ totalPlayed: 0, avgScore: '0' });
           </div>
         )}
 
-        {/* Quiz History */}
         <div style={{ background: 'white', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '16px' }}>
             📜 Quiz History
@@ -218,4 +207,3 @@ setStats({ totalPlayed: 0, avgScore: '0' });
     </div>
   );
 }
-
