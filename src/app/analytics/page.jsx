@@ -55,14 +55,12 @@ export default function AnalyticsPage() {
           attempts: v.count,
         })).sort((a, b) => a.avg - b.avg); // weakest first
         setWeakSubjects(subList);
-        setChartData([
-          { name: 'Test 1', score: 40 },
-          { name: 'Test 2', score: 60 },
-          { name: 'Test 3', score: 55 },
-          { name: 'Test 4', score: 75 },
-          { name: 'Test 5', score: 85 },
-        ]);
-        setStats({ totalPlayed: 0, avgScore: '0' });
+        // આ 7 lines delete કરી:
+setChartData([
+  { name: 'Test 1', score: 40 },
+  ...
+]);
+setStats({ totalPlayed: 0, avgScore: '0' });
       }
       setLoading(false);
     };

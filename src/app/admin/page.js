@@ -117,7 +117,7 @@ export default function AdminPage() {
     if (!authed) return;
     const loadStats = async () => {
       const results = {};
-      for (const s of SUBJECTS) {
+      for (const s of subjects) {
         const { count } = await supabase
           .from('questions')
           .select('*', { count: 'exact', head: true })
@@ -282,7 +282,7 @@ export default function AdminPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
           {[
             { label: 'Total Questions', value: totalQ, color: '#6366f1' },
-            { label: 'Subjects', value: SUBJECTS.length, color: '#8b5cf6' },
+            { label: 'subjects', value: subjects.length, color: '#8b5cf6' },
             { label: 'Ready (10+)', value: Object.values(stats).filter(v => v >= 10).length, color: '#10b981' },
           ].map(s => (
             <div key={s.label} style={{ background: 'white', borderRadius: '14px', padding: '14px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
@@ -295,7 +295,7 @@ export default function AdminPage() {
         <div style={{ background: 'white', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
           <div style={{ fontWeight: '800', color: '#1e1b4b', marginBottom: '12px', fontSize: '14px' }}>Subject wise Questions</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-            {SUBJECTS.map(s => {
+            {subjects.map(s => {
               const count = stats[s.value] || 0;
               const ready = count >= 10;
               return (
@@ -328,7 +328,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Default Subject</label>
               <select value={subject} onChange={e => setSubject(e.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
-                {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div style={{ background: '#f0fdf4', border: '2px solid #86efac', borderRadius: '12px', padding: '12px', marginBottom: '14px' }}>
@@ -376,7 +376,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Subject</label>
               <select value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
-                {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '14px' }}>
@@ -437,7 +437,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Subject</label>
               <select value={pdfForm.subject} onChange={e => setPdfForm({ ...pdfForm, subject: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', color: '#1e293b', background: 'white' }}>
-                {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '12px' }}>

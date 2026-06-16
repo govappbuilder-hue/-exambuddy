@@ -105,6 +105,7 @@ export default function DoubtSolverPage() {
         body: JSON.stringify({
           question: text,
           history: messages.slice(-6),
+          userId: user?.id,
         }),
       });
       const data = await res.json();

@@ -2,7 +2,7 @@
   "name": "ExamBuddy - Gujarat Exam Prep",
   "short_name": "ExamBuddy",
   "description": "GPSC, GSSSB, Police exam preparation in Gujarati",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#020817",
   "theme_color": "#6366f1",
