@@ -109,7 +109,11 @@ export default function DoubtSolverPage() {
         }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', text: data.answer || 'Error aayo, try karo.' }]);
+      if (data.error === "PREMIUM_REQUIRED") {
+        setMessages(prev => [...prev, { role: "assistant", text: "?? ? feature Premium users ???? ??. Premium ?? ??? unlimited doubts ????!", isLimit: true }]);
+      } else {
+        setMessages(prev => [...prev, { role: "assistant", text: data.answer || "Error aayo, try karo." }]);
+      }
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', text: '❌ Network error. Internet check karo.' }]);
     }
