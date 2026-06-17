@@ -9,7 +9,13 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // તારા બીજા કોઈ એક્ઝિસ્ટિંગ કન્ફિગરેશન હોય તો અહીં રાખવા
+  // Turbopack ને ફરજિયાત બંધ કરવા માટે આ લાઇન ઉમેરી છે
+  turbo: {
+    rules: {},
+  },
+  webpack: (config) => {
+    return config;
+  },
 };
 
 export default withPWA(nextConfig);
