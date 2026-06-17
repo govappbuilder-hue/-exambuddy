@@ -7,11 +7,6 @@ export async function POST(request) {
     // .env.local માંથી સિક્રેટ પાસવર્ડ રીડ કરો
     const correctPassword = process.env.ADMIN_PASSWORD;
 
-    // 🛠️ ડીબગીંગ લોગ્સ: આ તમારા VS Code ના ટર્મિનલમાં દેખાશે
-    console.log("--- ADMIN AUTH CHECK ---");
-    console.log("યુઝરે નાખેલો પાસવર્ડ:", password);
-    console.log("Environment નો સાચો પાસવર્ડ:", correctPassword);
-
     // જો એન્વાયરમેન્ટ વેરિએબલ લોડ ન થયો હોય તો
     if (!correctPassword) {
       console.error("❌ એરર: .env.local માંથી ADMIN_PASSWORD લોડ થયો નથી!");

@@ -125,7 +125,11 @@ export default function MockTestPage() {
           [arr[i], arr[j]] = [arr[j], arr[i]];
         }
         const picked = arr.slice(0, Math.min(sub.count, arr.length));
-        picked.forEach(q => allQ.push({ ...q, _subject: sub.label }));
+        picked.forEach(q => allQ.push({
+          ...q,
+          correct_answer: (q.correct_answer || '').toString().trim().toUpperCase(),
+          _subject: sub.label,
+        }));
       }
     }
 

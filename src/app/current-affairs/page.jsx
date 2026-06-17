@@ -53,7 +53,7 @@ export default function CurrentAffairsPage() {
   };
   init();
 }, []);
-  // Generate MCQ for an article using Gemini
+  // Generate MCQ for an article using the dedicated current-affairs quiz API
   const generateMCQ = async (article) => {
     setMcqArticle(article);
     setMcqs([]);
@@ -62,28 +62,28 @@ export default function CurrentAffairsPage() {
     setMcqLoading(true);
 
     try {
-      const res = await fetch("/api/doubt-solver", {
+      const res = await fetch("/api/generate-ca-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: `Based on this current affairs topic, generate 5 MCQ questions in Gujarati for GPSC exam preparation.
-
-Topic: ${article.title}
-Summary: ${article.summary}
-
-Return ONLY a JSON array in this exact format, no other text:
-[{"q":"question","a":"option A","b":"option B","c":"option C","d":"option D","ans":"A","exp":"brief explanation in Gujarati"}]`
+          articles: [{ title: article.title, summary: article.summary }],
         }),
       });
       const data = await res.json();
-      const text = data.answer || data.response || "";
 
-      // Extract JSON
-      const start = text.indexOf("[");
-      const end = text.lastIndexOf("]");
-      if (start !== -1 && end !== -1) {
-        const parsed = JSON.parse(text.slice(start, end + 1));
-        setMcqs(parsed);
+      if (data.questions?.length > 0) {
+        // Map API shape (option_a/b/c/d, correct_answer) to the shape
+        // this page's UI already renders (q/a/b/c/d/ans/exp).
+        const mapped = data.questions.map((item) => ({
+          q: item.question,
+          a: item.option_a,
+          b: item.option_b,
+          c: item.option_c,
+          d: item.option_d,
+          ans: (item.correct_answer || "").toString().trim().toUpperCase(),
+          exp: item.explanation || "",
+        }));
+        setMcqs(mapped);
       } else {
         alert("MCQ generate na thaya. Pachi try karo.");
         setMcqArticle(null);

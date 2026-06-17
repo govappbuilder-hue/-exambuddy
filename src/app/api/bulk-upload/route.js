@@ -45,8 +45,8 @@ export async function POST(request) {
       option_c: item.c || item.option_c,
       option_d: item.d || item.option_d,
       correct_answer: typeof item.correct_option === 'string' && item.correct_option.length === 1
-        ? item.correct_option.toLowerCase()
-        : ['a','b','c','d'][item.correct_option] || 'a',
+        ? item.correct_option.toUpperCase()
+        : ['A','B','C','D'][item.correct_option] || 'A',
       explanation: item.explanation || '',
       exam_tag: item.exam_tag || '',
     }));
