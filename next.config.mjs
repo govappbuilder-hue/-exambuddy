@@ -8,14 +8,6 @@ const withPWA = withPWAInit({
 });
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Turbopack ને ફરજિયાત બંધ કરવા માટે આ લાઇન ઉમેરી છે
-  turbo: {
-    rules: {},
-  },
-  webpack: (config) => {
-    return config;
-  },
-};
+const nextConfig = {};
 
 export default withPWA(nextConfig);

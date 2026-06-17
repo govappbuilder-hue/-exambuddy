@@ -1,8 +1,9 @@
 {
-  "rewrites": [
+  "redirects": [
     {
       "source": "/.well-known/assetlinks.json",
-      "destination": "/well-known/assetlinks.json"
+      "destination": "https://pastebin.com/raw/d8Y2WQLv",
+      "permanent": true
     }
   ]
 }
