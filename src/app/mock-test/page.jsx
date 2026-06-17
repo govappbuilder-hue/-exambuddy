@@ -69,6 +69,27 @@ const EXAMS = [
 
 export default function MockTestPage() {
   const router = useRouter();
+
+  // Question order shuffle uparant options (A/B/C/D) nu position pan shuffle kare,
+  // jethi sachu jawab hamesha ek j slot ma na rahe.
+  const shuffleQuestionOptions = (q) => {
+    const letters = ['A', 'B', 'C', 'D'];
+    const opts = letters.map(l => ({ letter: l, text: q[`option_${l.toLowerCase()}`] }));
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    const newCorrectIdx = opts.findIndex(o => o.letter === (q.correct_answer || 'A').toUpperCase());
+    return {
+      ...q,
+      option_a: opts[0].text,
+      option_b: opts[1].text,
+      option_c: opts[2].text,
+      option_d: opts[3].text,
+      correct_answer: letters[newCorrectIdx === -1 ? 0 : newCorrectIdx],
+    };
+  };
+
   const [screen, setScreen] = useState('select');
   const [selectedExam, setSelectedExam] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -125,11 +146,11 @@ export default function MockTestPage() {
           [arr[i], arr[j]] = [arr[j], arr[i]];
         }
         const picked = arr.slice(0, Math.min(sub.count, arr.length));
-        picked.forEach(q => allQ.push({
+        picked.forEach(q => allQ.push(shuffleQuestionOptions({
           ...q,
           correct_answer: (q.correct_answer || '').toString().trim().toUpperCase(),
           _subject: sub.label,
-        }));
+        })));
       }
     }
 

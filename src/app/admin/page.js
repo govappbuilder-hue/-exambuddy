@@ -75,15 +75,34 @@ export default function AdminPage() {
     setMatsLoading(false);
   };
 
+  const [matDeletingId, setMatDeletingId] = useState(null);
+
   const deleteMaterial = async (mat) => {
     if (!confirm(`Delete "${mat.title}"?`)) return;
-    // Delete from storage
-    if (mat.file_url) {
-      const fileName = mat.file_url.split('/').pop();
-      await supabase.storage.from('study-materials').remove([fileName]);
+    setMatDeletingId(mat.id);
+    try {
+      // file_url public path manthi storage-relative path kadhvo
+      // (e.g. .../object/public/study-materials/maths/123_file.pdf -> maths/123_file.pdf)
+      if (mat.file_url) {
+        const marker = '/study-materials/';
+        const idx = mat.file_url.indexOf(marker);
+        const storagePath = idx !== -1 ? mat.file_url.slice(idx + marker.length) : mat.file_url.split('/').pop();
+        const { error: storageErr } = await supabase.storage.from('study-materials').remove([storagePath]);
+        if (storageErr) {
+          console.error('Storage delete error:', storageErr.message);
+        }
+      }
+      const { error: dbErr } = await supabase.from('study_materials').delete().eq('id', mat.id);
+      if (dbErr) {
+        alert('❌ Delete fail thayu: ' + dbErr.message + '\n\n(Supabase ma "study_materials" table par DELETE policy nathi hoi sake.)');
+        return;
+      }
+      setMaterials(prev => prev.filter(m => m.id !== mat.id));
+    } catch (err) {
+      alert('❌ Delete ma error: ' + err.message);
+    } finally {
+      setMatDeletingId(null);
     }
-    await supabase.from('study_materials').delete().eq('id', mat.id);
-    setMaterials(prev => prev.filter(m => m.id !== mat.id));
   };
 
   const handlePdfUpload = async () => {
@@ -108,6 +127,41 @@ export default function AdminPage() {
     finally { setPdfUploading(false); }
   };
 
+  // MCQ Manage state
+  const [mcqList, setMcqList] = useState([]);
+  const [mcqLoading, setMcqLoading] = useState(false);
+  const [mcqSubjectFilter, setMcqSubjectFilter] = useState('all');
+  const [mcqSearch, setMcqSearch] = useState('');
+  const [mcqDeletingId, setMcqDeletingId] = useState(null);
+  const [mcqError, setMcqError] = useState('');
+
+  const fetchQuestions = async () => {
+    setMcqLoading(true);
+    setMcqError('');
+    let query = supabase.from('questions').select('*').order('created_at', { ascending: false }).limit(300);
+    if (mcqSubjectFilter !== 'all') query = query.eq('subject', mcqSubjectFilter);
+    if (mcqSearch.trim()) query = query.ilike('question', `%${mcqSearch.trim()}%`);
+    const { data, error } = await query;
+    if (error) setMcqError(error.message);
+    setMcqList(data || []);
+    setMcqLoading(false);
+  };
+
+  const deleteQuestion = async (q) => {
+    if (!confirm('Aa MCQ delete karvu che?\n\n' + q.question.slice(0, 80))) return;
+    setMcqDeletingId(q.id);
+    const { error } = await supabase.from('questions').delete().eq('id', q.id);
+    if (error) {
+      alert('❌ Delete fail thayu: ' + error.message + '\n\n(Supabase ma "questions" table par DELETE policy nathi hoi sake.)');
+    } else {
+      setMcqList(prev => prev.filter(m => m.id !== q.id));
+      setStats(p => ({ ...p, [q.subject]: Math.max(0, (p[q.subject] || 1) - 1) }));
+    }
+    setMcqDeletingId(null);
+  };
+
+
+
   useEffect(() => {
     const storedToken = sessionStorage.getItem('admin_token');
     if (storedToken) setAuthed(true);
@@ -121,8 +175,8 @@ export default function AdminPage() {
         const { count } = await supabase
           .from('questions')
           .select('*', { count: 'exact', head: true })
-          .eq('subject', s.value);
-        results[s.value] = count || 0;
+          .eq('subject', s.id);
+        results[s.id] = count || 0;
       }
       setStats(results);
     };
@@ -296,11 +350,11 @@ export default function AdminPage() {
           <div style={{ fontWeight: '800', color: '#1e1b4b', marginBottom: '12px', fontSize: '14px' }}>Subject wise Questions</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
             {subjects.map(s => {
-              const count = stats[s.value] || 0;
+              const count = stats[s.id] || 0;
               const ready = count >= 10;
               return (
-                <div key={s.value} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: ready ? '#f0fdf4' : '#fef2f2', border: `1px solid ${ready ? '#86efac' : '#fca5a5'}` }}>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>{s.label}</span>
+                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: ready ? '#f0fdf4' : '#fef2f2', border: `1px solid ${ready ? '#86efac' : '#fca5a5'}` }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>{s.icon} {s.name}</span>
                   <span style={{ fontSize: '12px', fontWeight: '800', color: ready ? '#166534' : '#dc2626' }}>{count} {ready ? 'OK' : 'X'}</span>
                 </div>
               );
@@ -308,15 +362,16 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
           {[
             { key: 'bulk', label: 'Bulk Upload' },
             { key: 'single', label: 'Single Add' },
+            { key: 'manage', label: '📋 MCQ Manage' },
             { key: 'pdf', label: '📄 PDF' },
             { key: 'materials', label: '🗂️ Materials' },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: tab === t.key ? 'white' : 'rgba(255,255,255,0.2)', color: tab === t.key ? '#667eea' : 'white', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
+              style={{ flex: '1 1 30%', minWidth: '110px', padding: '12px', borderRadius: '12px', border: 'none', background: tab === t.key ? 'white' : 'rgba(255,255,255,0.2)', color: tab === t.key ? '#667eea' : 'white', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
               {t.label}
             </button>
           ))}
@@ -328,7 +383,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Default Subject</label>
               <select value={subject} onChange={e => setSubject(e.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
-                {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {subjects.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
               </select>
             </div>
             <div style={{ background: '#f0fdf4', border: '2px solid #86efac', borderRadius: '12px', padding: '12px', marginBottom: '14px' }}>
@@ -376,7 +431,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Subject</label>
               <select value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
-                {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {subjects.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '14px' }}>
@@ -414,6 +469,64 @@ export default function AdminPage() {
           </div>
         )}
 
+        {tab === 'manage' && (
+          <div style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+            <div style={{ fontWeight: '800', fontSize: '16px', color: '#1e293b', marginBottom: '14px' }}>📋 Badha MCQ Manage Karo</div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <select value={mcqSubjectFilter} onChange={e => setMcqSubjectFilter(e.target.value)}
+                style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', outline: 'none', color: '#1e293b', background: 'white' }}>
+                <option value="all">બધા Subjects</option>
+                {subjects.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+              <input value={mcqSearch} onChange={e => setMcqSearch(e.target.value)}
+                placeholder="Question text search karo..."
+                onKeyDown={e => e.key === 'Enter' && fetchQuestions()}
+                style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: '#1e293b' }} />
+              <button onClick={fetchQuestions} disabled={mcqLoading}
+                style={{ padding: '10px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                {mcqLoading ? '⏳' : '🔄 Load'}
+              </button>
+            </div>
+
+            {mcqError && (
+              <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px', borderRadius: '10px', marginBottom: '12px', fontWeight: '600', fontSize: '13px' }}>
+                {mcqError}
+              </div>
+            )}
+
+            {!mcqLoading && mcqList.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '30px 0', color: '#94a3b8', fontSize: '14px' }}>Upar "🔄 Load" dabaavo MCQ jova mate (latest 300)</div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '600px', overflowY: 'auto' }}>
+              {mcqList.map(q => (
+                <div key={q.id} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e1b4b', lineHeight: 1.5 }}>{q.question}</div>
+                    <button onClick={() => deleteQuestion(q)} disabled={mcqDeletingId === q.id}
+                      style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: mcqDeletingId === q.id ? 'not-allowed' : 'pointer', flexShrink: 0, opacity: mcqDeletingId === q.id ? 0.6 : 1 }}>
+                      {mcqDeletingId === q.id ? '⏳' : '🗑️'}
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                    {['A', 'B', 'C', 'D'].map(opt => (
+                      <div key={opt} style={{ fontSize: '12px', padding: '6px 8px', borderRadius: '6px', background: opt === q.correct_answer ? '#dcfce7' : '#f8fafc', color: opt === q.correct_answer ? '#166534' : '#475569', fontWeight: opt === q.correct_answer ? '700' : '500' }}>
+                        {opt}. {q[`option_${opt.toLowerCase()}`]} {opt === q.correct_answer ? '✅' : ''}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {subjects.find(s => s.id === q.subject)?.icon || ''} {subjects.find(s => s.id === q.subject)?.name || q.subject}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {tab === 'pdf' && (
           <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ fontWeight: '800', fontSize: '16px', color: '#1e293b', marginBottom: '16px' }}>📄 Study Material PDF Upload</div>
@@ -437,7 +550,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Subject</label>
               <select value={pdfForm.subject} onChange={e => setPdfForm({ ...pdfForm, subject: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '14px', outline: 'none', color: '#1e293b', background: 'white' }}>
-                {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {subjects.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '12px' }}>
@@ -505,8 +618,9 @@ export default function AdminPage() {
                       {mat.subject} • {mat.material_type} • {mat.is_free ? '🆓 Free' : '💎 ₹' + mat.price}
                     </div>
                   </div>
-                  <button onClick={() => deleteMaterial(mat)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
-                    🗑️ Delete
+                  <button onClick={() => deleteMaterial(mat)} disabled={matDeletingId === mat.id}
+                    style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: matDeletingId === mat.id ? 'not-allowed' : 'pointer', flexShrink: 0, opacity: matDeletingId === mat.id ? 0.6 : 1 }}>
+                    {matDeletingId === mat.id ? '⏳...' : '🗑️ Delete'}
                   </button>
                 </div>
               ))}

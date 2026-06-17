@@ -37,6 +37,26 @@ type Question = {
   explanation?: string;
 };
 
+// Question order shuffle uparant options (A/B/C/D) nu position pan shuffle kare,
+// jethi sachu jawab hamesha ek j slot ma na rahe ane MCQ "naya" lage.
+function shuffleQuestionOptions(q: Question): Question {
+  const letters: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
+  const opts = letters.map(l => ({ letter: l, text: (q as any)[`option_${l.toLowerCase()}`] as string }));
+  for (let i = opts.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [opts[i], opts[j]] = [opts[j], opts[i]];
+  }
+  const newCorrectIdx = opts.findIndex(o => o.letter === (q.correct_answer || 'A').toUpperCase());
+  return {
+    ...q,
+    option_a: opts[0].text,
+    option_b: opts[1].text,
+    option_c: opts[2].text,
+    option_d: opts[3].text,
+    correct_answer: letters[newCorrectIdx === -1 ? 0 : newCorrectIdx],
+  };
+}
+
 type Screen = 'setup' | 'quiz' | 'result';
 
 interface PageProps {
@@ -107,7 +127,7 @@ useEffect(() => {
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
 
-    setQuestions(arr.slice(0, totalMarks));
+    setQuestions(arr.slice(0, totalMarks).map(shuffleQuestionOptions));
     setTimeLeft(totalMarks * 60);
     setCurrent(0);
     setSelected({});
