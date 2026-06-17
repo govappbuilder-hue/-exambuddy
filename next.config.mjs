@@ -1,13 +1,6 @@
-import withPWAInit from 'next-pwa';
-
-const withPWA = withPWAInit({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-  register: true,
-  skipWaiting: true,
-});
-
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  /* તારા બીજા નોર્મલ કન્ફિગરેશન અહીં હોય તો ઠીક, બાકી આને આમ જ ખાલી છોડી દેવું */
+};
 
-export default withPWA(nextConfig);
+export default nextConfig;
