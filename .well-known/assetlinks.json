@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.exambuddy_ochre.twa",
+      "sha256_cert_fingerprints": [
+        "C2:E4:B0:7F:4A:54:4F:4C:B7:8F:34:A5:58:C3:46:61:0B:D6:A5:81:9C:12:71:C1:41:72:6C:0F:66:F1:62:94"
+      ]
+    }
+  }
+]
