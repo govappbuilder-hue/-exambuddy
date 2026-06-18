@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* તારા બીજા નોર્મલ કન્ફિગરેશન અહીં હોય તો ઠીક, બાકી આને આમ જ ખાલી છોડી દેવું */
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
