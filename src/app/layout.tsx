@@ -1,3 +1,4 @@
+import React from "react";
 import "./globals.css";
 import BottomNav from "../components/BottomNav";
 import { ThemeProvider } from "../context/ThemeContext";
