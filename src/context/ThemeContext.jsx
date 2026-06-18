@@ -7,11 +7,10 @@ const ThemeContext = createContext({
 });
 
 export function ThemeProvider({ children }) {
-  const [dark, setDark] = useState(true); // default dark
+  const [dark, setDark] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem('eb_dark_mode');
-    // Pehli vaar open: dark=true (app dark by default)
     const isDark = saved === null ? true : saved === 'true';
     setDark(isDark);
     applyTheme(isDark);
@@ -19,10 +18,8 @@ export function ThemeProvider({ children }) {
 
   const applyTheme = (isDark) => {
     if (isDark) {
-      // Dark mode: data-theme attribute remove karo
       document.documentElement.removeAttribute('data-theme');
     } else {
-      // Light mode: data-theme="light" set karo
       document.documentElement.setAttribute('data-theme', 'light');
     }
   };
