@@ -23,7 +23,7 @@ export async function POST(request) {
       .map((a, i) => `${i + 1}. ${a.title} — ${a.summary}`)
       .join("\n");
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `નીચે આપેલ current affairs ના આધારે GPSC/UPSC exam માટે 8 MCQ questions બનાવો.
 દરેક question Gujarati માં હોવો જોઈએ. Correct answer સ્પષ્ટ હોવો જોઈએ.

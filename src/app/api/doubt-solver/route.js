@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
 export async function POST(request) {
@@ -29,10 +29,7 @@ export async function POST(request) {
       .single();
 
     const isPremium = premium?.is_active && new Date(premium.expires_at) > new Date();
-
-    if (!isPremium) {
-      return Response.json({ error: "PREMIUM_REQUIRED" }, { status: 403 });
-    }
+    // Free users ne pan allow karo — daily limit frontend (localStorage) thi control thay che
 
     const contextMessages = history
       ? history.slice(-4).map((m) => ({
