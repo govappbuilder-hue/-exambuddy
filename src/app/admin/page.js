@@ -396,7 +396,7 @@ export default function AdminPage() {
             </button>
             <textarea value={jsonText} onChange={e => handleJsonChange(e.target.value)}
               placeholder='[ { "question": "...", ... } ]'
-              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', minHeight: '150px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace', marginBottom: '14px' }} />
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '13px', minHeight: '150px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace', marginBottom: '14px', color: '#111827', background: '#ffffff' }} />
             {preview.length > 0 && (
               <div style={{ background: '#eff6ff', border: '2px solid #bfdbfe', borderRadius: '12px', padding: '12px', marginBottom: '14px' }}>
                 <div style={{ fontWeight: '700', color: '#1d4ed8', fontSize: '12px', marginBottom: '8px' }}>Preview ({preview.length} questions):</div>
@@ -438,7 +438,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Question</label>
               <textarea value={form.question} onChange={e => setForm({ ...form, question: e.target.value })}
                 placeholder="Question..."
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '80px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '80px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#111827', background: '#ffffff' }} />
             </div>
             {['A', 'B', 'C', 'D'].map(opt => (
               <div key={opt} style={{ marginBottom: '10px' }}>
@@ -446,13 +446,13 @@ export default function AdminPage() {
                 <input value={form[`option_${opt.toLowerCase()}`]}
                   onChange={e => setForm({ ...form, [`option_${opt.toLowerCase()}`]: e.target.value })}
                   placeholder={`Option ${opt}`}
-                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `2px solid ${opt === form.correct_answer ? '#86efac' : '#e5e7eb'}`, fontSize: '15px', outline: 'none', boxSizing: 'border-box' }} />
+                 style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `2px solid ${opt === form.correct_answer ? '#86efac' : '#e5e7eb'}`, fontSize: '15px', outline: 'none', boxSizing: 'border-box', color: '#111827', background: '#ffffff' }} />
               </div>
             ))}
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Correct Answer</label>
               <select value={form.correct_answer} onChange={e => setForm({ ...form, correct_answer: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #86efac', fontSize: '15px', outline: 'none' }}>
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #86efac', fontSize: '15px', outline: 'none', color: '#111827', background: '#ffffff' }}>
                 {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>Option {o}</option>)}
               </select>
             </div>
@@ -460,7 +460,7 @@ export default function AdminPage() {
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Explanation (optional)</label>
               <textarea value={form.explanation} onChange={e => setForm({ ...form, explanation: e.target.value })}
                 placeholder="Explanation..."
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '60px', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', minHeight: '60px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#111827', background: '#ffffff' }} />
             </div>
             <button onClick={handleSave} disabled={saving}
               style={{ width: '100%', padding: '14px', background: saving ? '#94a3b8' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: saving ? 'not-allowed' : 'pointer' }}>
