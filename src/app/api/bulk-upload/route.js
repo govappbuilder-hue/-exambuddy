@@ -30,9 +30,15 @@ export async function POST(request) {
       'ગુજરાતી': 'gujarati', 'gujarati': 'gujarati',
       'english': 'english', 'English': 'english',
       'gk': 'gk', 'સામાન્ય જ્ઞાન': 'gk',
-      'reasoning': 'reasoning', 'રીઝનિંગ': 'reasoning',
-      'computer': 'computer', 'કોમ્પ્યૂટર': 'computer',
-      'current_affairs': 'current_affairs', 'current-affairs': 'current_affairs',
+      'reasoning': 'reasoning', 'રીઝનિંગ': 'reasoning', 'તર્કશક્તિ': 'reasoning',
+      'computer': 'computer', 'કોમ્પ્યૂટર': 'computer', 'કોમ્પ્યુટર': 'computer',
+      'current_affairs': 'current-affairs', 'current-affairs': 'current-affairs', 'કરંટ અફેર્સ': 'current-affairs',
+      'polity': 'polity', 'રાજ્યશાસ્ત્ર': 'polity',
+      'gujarati_sahitya': 'gujarati_sahitya', 'ગુ. સાહિત્ય': 'gujarati_sahitya',
+      'gujarati_vyakran': 'gujarati_vyakran', 'ગુ. વ્યાકરણ': 'gujarati_vyakran',
+      'law': 'law', 'કાયદો': 'law',
+      'heritage': 'heritage', 'વારસો': 'heritage',
+      'pub_ad': 'pub_ad', 'જાહેર વહીવટ': 'pub_ad',
     };
 
     const optMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3 };

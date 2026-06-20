@@ -382,7 +382,7 @@ export default function AdminPage() {
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Default Subject</label>
               <select value={subject} onChange={e => setSubject(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none', color: '#111827', background: '#ffffff' }}>
                 {subjects.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
               </select>
             </div>
@@ -430,7 +430,7 @@ export default function AdminPage() {
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontWeight: '700', color: '#374151', marginBottom: '6px', fontSize: '13px' }}>Subject</label>
               <select value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none' }}>
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '15px', outline: 'none', color: '#111827', background: '#ffffff' }}>
                 {subjects.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
               </select>
             </div>
