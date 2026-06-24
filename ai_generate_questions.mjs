@@ -8,15 +8,32 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 const LIVE_URL = "https://exambuddy-ochre.vercel.app";
 
 const SUBJECTS = [
+  { key: 'geography', name: 'ભૂગોળ (Gujarat & India Geography)' },
+  { key: 'science', name: 'સામાન્ય વિજ્ઞાન (General Science)' },
+  { key: 'constitution', name: 'ભારતીય બંધારણ (Indian Constitution)' },
+  { key: 'economics', name: 'અર્થશાસ્ત્ર (Indian Economy)' },
+  { key: 'gujarati', name: 'ગુજરાતી ભાષા-વ્યાકરણ (Gujarati Grammar)' },
+  { key: 'english', name: 'English Grammar' },
+  { key: 'gk', name: 'સામાન્ય જ્ઞાન (General Knowledge - Gujarat focus)' },
+  { key: 'polity', name: 'રાજ્યશાસ્ત્ર (Indian Polity)' },
+  { key: 'computer', name: 'કોમ્પ્યુટર (Basic Computer Knowledge)' },
+  { key: 'reasoning', name: 'તર્કશક્તિ (Logical Reasoning)' },
+  { key: 'gujarati_sahitya', name: 'ગુજરાતી સાહિત્ય (Gujarati Literature)' },
+  { key: 'gujarati_vyakran', name: 'ગુજરાતી વ્યાકરણ (Gujarati Grammar Advanced)' },
+  { key: 'law', name: 'કાયદો (Basic Law & Acts)' },
+  { key: 'heritage', name: 'વારસો અને સંસ્કૃતિ (Gujarat Heritage & Culture)' },
+  { key: 'pub_ad', name: 'જાહેર વહીવટ (Public Administration)' },
   { key: 'history', name: 'ઇતિહાસ (Gujarat & India History)' },
 ];
 
-const BATCH_SIZE = 10;       // ek API call ma kelta questions
-const BATCHES_PER_SUBJECT = 3; // 10 x 3 = 30 questions per subject
-const GROQ_KEY = process.env.GROQ_API_KEY;
+const TOTAL_PER_SUBJECT = 200;
+const BATCH_SIZE = 10;
+const BATCHES_PER_SUBJECT = TOTAL_PER_SUBJECT / BATCH_SIZE; // 20 batches
+const GEMINI_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 const ADMIN_TOKEN = process.env.ADMIN_SECRET_TOKEN;
 
-if (!GROQ_KEY || !ADMIN_TOKEN) {
+if (!GEMINI_KEY || !ADMIN_TOKEN)
+ {
   console.error("❌ GROQ_API_KEY ya ADMIN_SECRET_TOKEN .env.local ma nathi malta!");
   process.exit(1);
 }
@@ -54,30 +71,27 @@ async function generateBatch(subject, batchNum) {
   ]
 }`;
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  async function callGroq(prompt) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${GROQ_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 3000,
+      contents: [{ parts: [{ text: prompt }] }],
     }),
   });
 
   if (res.status === 429) {
-    console.log('⏳ Rate limit — 25 second rahi ne retry...');
-    await new Promise(r => setTimeout(r, 25000));
-    return generateBatch(subject, batchNum);
+    console.log('⏳ Rate limit — 30 second rahi ne retry...');
+    await new Promise(r => setTimeout(r, 30000));
+    return callGroq(prompt);
   }
-
   if (!res.ok) {
-    console.error(`❌ Groq API error: ${res.status}`);
-    return [];
+    console.error(`❌ Gemini API error: ${res.status}`);
+    return null;
   }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+}
 
   const data = await res.json();
   const raw = data.choices?.[0]?.message?.content?.trim() || '';

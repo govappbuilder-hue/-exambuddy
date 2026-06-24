@@ -80,17 +80,22 @@ Respond with ONLY this JSON array format, nothing else:
       throw new Error("Invalid JSON response from AI");
     }
 
-    // Save to Supabase for caching
+    // Date-wise cache key — har divas navi cards generate thay
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = `${subject}_${today}`;
+
     const { error: dbError } = await supabase
       .from("flashcards")
       .upsert(
-        { subject, cards: parsed, generated_at: new Date().toISOString() },
+        { subject: cacheKey, cards: parsed, generated_at: new Date().toISOString() },
         { onConflict: "subject" }
       );
 
     if (dbError) console.error("Flashcard save error:", dbError.message);
 
-    return Response.json({ success: true, cards: parsed });
+    // Shuffle order before sending
+    const shuffled = [...parsed].sort(() => Math.random() - 0.5);
+    return Response.json({ success: true, cards: shuffled });
 
   } catch (error) {
     console.error("Flashcard Error:", error.message);
@@ -103,17 +108,22 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const subject = searchParams.get("subject");
 
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = `${subject}_${today}`;
+
     const { data, error } = await supabase
       .from("flashcards")
       .select("*")
-      .eq("subject", subject)
+      .eq("subject", cacheKey)
       .single();
 
     if (error || !data) {
       return Response.json({ cards: [] });
     }
 
-    return Response.json({ cards: data.cards || [] });
+    // Shuffle order every time so it feels fresh
+    const shuffled = [...(data.cards || [])].sort(() => Math.random() - 0.5);
+    return Response.json({ cards: shuffled });
   } catch (error) {
     return Response.json({ cards: [] });
   }
