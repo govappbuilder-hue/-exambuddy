@@ -1,3 +1,8 @@
+export const metadata = {
+  title: "Privacy Policy | ExamBuddy",
+  description: "ExamBuddy Privacy Policy - how we collect and protect your data",
+};
+
 export default function PrivacyPolicy() {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px', lineHeight: '1.7', color: '#1f2937' }}>
@@ -51,7 +56,7 @@ export default function PrivacyPolicy() {
 
       <h2 style={{ fontSize: '20px', fontWeight: '700', marginTop: '24px', marginBottom: '10px' }}>10. Contact Us</h2>
       <p style={{ marginBottom: '16px' }}>
-        If you have questions about this Privacy Policy, please contact us through the app's support section.
+        If you have questions about this Privacy Policy, please contact us at support@exambuddy.app or through the app's support section.
       </p>
     </div>
   );

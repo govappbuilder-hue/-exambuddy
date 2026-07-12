@@ -1,3 +1,8 @@
+export const metadata = {
+  title: "Terms & Conditions | ExamBuddy",
+  description: "ExamBuddy Terms and Conditions of use",
+};
+
 export default function TermsAndConditions() {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px', lineHeight: '1.7', color: '#1f2937' }}>
@@ -51,7 +56,7 @@ export default function TermsAndConditions() {
 
       <h2 style={{ fontSize: '20px', fontWeight: '700', marginTop: '24px', marginBottom: '10px' }}>10. Contact</h2>
       <p style={{ marginBottom: '16px' }}>
-        For questions regarding these Terms, please contact us through the app's support section.
+        For questions regarding these Terms, please contact us at support@exambuddy.app or through the app's support section.
       </p>
     </div>
   );
