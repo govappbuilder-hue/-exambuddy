@@ -38,6 +38,8 @@ const SAMPLE_JSON = `[
   }
 ]`;
 
+const MIN_QUESTION_THRESHOLD = 50;
+
 export default function AdminPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
@@ -193,11 +195,12 @@ export default function AdminPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         sessionStorage.setItem('admin_token', data.token || 'exambuddy_secure_admin_session_2026');
+        document.cookie = `admin_session=${data.token}; path=/; max-age=28800; SameSite=Lax`;
         setAuthed(true);
         setPassError('');
         setPassInput('');
       } else {
-        setPassError(data.message || 'Password खोटो छे!');
+        setPassError(data.message || 'Password ખોટો छે!');
         setPassInput('');
       }
     } catch (err) {
@@ -207,6 +210,7 @@ export default function AdminPage() {
 
   const handleLogout = () => {
     sessionStorage.removeItem('admin_token');
+    document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     setAuthed(false);
     router.push('/');
   };
@@ -317,6 +321,7 @@ export default function AdminPage() {
   );
 
   const totalQ = Object.values(stats).reduce((a, b) => a + b, 0);
+  const lowCoverageSubjects = subjects.filter(s => (stats[s.id] || 0) < MIN_QUESTION_THRESHOLD);
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px', fontFamily: 'system-ui' }}>
@@ -337,7 +342,7 @@ export default function AdminPage() {
           {[
             { label: 'Total Questions', value: totalQ, color: '#6366f1' },
             { label: 'subjects', value: subjects.length, color: '#8b5cf6' },
-            { label: 'Ready (10+)', value: Object.values(stats).filter(v => v >= 10).length, color: '#10b981' },
+            { label: `Ready (${MIN_QUESTION_THRESHOLD}+ )`, value: Object.values(stats).filter(v => v >= MIN_QUESTION_THRESHOLD).length, color: '#10b981' },
           ].map(s => (
             <div key={s.label} style={{ background: 'white', borderRadius: '14px', padding: '14px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
               <div style={{ fontSize: '24px', fontWeight: '900', color: s.color }}>{s.value}</div>
@@ -351,7 +356,7 @@ export default function AdminPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
             {subjects.map(s => {
               const count = stats[s.id] || 0;
-              const ready = count >= 10;
+              const ready = count >= MIN_QUESTION_THRESHOLD;
               return (
                 <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: ready ? '#f0fdf4' : '#fef2f2', border: `1px solid ${ready ? '#86efac' : '#fca5a5'}` }}>
                   <span style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>{s.icon} {s.name}</span>
@@ -360,6 +365,14 @@ export default function AdminPage() {
               );
             })}
           </div>
+          {lowCoverageSubjects.length > 0 && (
+            <div style={{ marginTop: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#dc2626', marginBottom: '6px' }}>Content gap report</div>
+              <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.6 }}>
+                {lowCoverageSubjects.map(s => `${s.name}: ${stats[s.id] || 0}/${MIN_QUESTION_THRESHOLD}`).join(' • ')}
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>

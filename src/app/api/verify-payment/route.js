@@ -17,10 +17,19 @@ export async function POST(request) {
       plan,
     } = await request.json();
 
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !userId || !plan) {
+      return NextResponse.json({ error: 'Missing payment data' }, { status: 400 });
+    }
+
+    const allowedPlans = ['adfree', 'marketplace', 'monthly', 'halfyearly', 'yearly'];
+    if (!allowedPlans.includes(plan)) {
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    }
+
     // Signature verify
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
       .update(body)
       .digest('hex');
 
@@ -41,7 +50,7 @@ export async function POST(request) {
     const expiresAt = new Date(now + (expiryMap[plan] || expiryMap.monthly));
 
     // Supabase ma save karo
-    await supabase.from('user_premium').upsert({
+    const { error: premiumError } = await supabase.from('user_premium').upsert({
       user_id: userId,
       plan,
       payment_id: razorpay_payment_id,
@@ -49,6 +58,10 @@ export async function POST(request) {
       expires_at: expiresAt.toISOString(),
       is_active: true,
     }, { onConflict: 'user_id' });
+
+    if (premiumError) {
+      return NextResponse.json({ error: 'Failed to persist premium status' }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, expiresAt: expiresAt.toISOString() });
   } catch (error) {

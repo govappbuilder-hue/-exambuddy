@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getDoubtSolverFallbackMessage } from '../../../lib/doubt-solver-utils.mjs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -14,7 +15,7 @@ export async function POST(request) {
       return Response.json({ error: "No question provided" }, { status: 400 });
     }
     if (!apiKey) {
-      return Response.json({ error: "GROQ API key missing" }, { status: 500 });
+      return Response.json({ error: getDoubtSolverFallbackMessage('missing api key') }, { status: 500 });
     }
 
     // ✅ Auth + Premium Check
@@ -38,20 +39,22 @@ export async function POST(request) {
         }))
       : [];
 
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        max_tokens: 3000,
-        temperature: 0.7,
-        messages: [
-          {
-            role: "system",
-            content: `You are ExamBuddy AI, a specialist doubt solver for Gujarat Government exam students.
+    let res;
+    try {
+      res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 3000,
+          temperature: 0.7,
+          messages: [
+            {
+              role: "system",
+              content: `You are ExamBuddy AI, a specialist doubt solver for Gujarat Government exam students.
 Target exams: GPSC Class 1-2, GPSC Class 3, PSI/ASI, Talati, Bin Sachivalay, GSSSB, Head Clerk, Revenue Talati, Forest Guard, Constable, Nayab Mamlatdar, DYSO.
 
 Rules:
@@ -62,23 +65,32 @@ Rules:
 - Keep answers under 300 words
 - End with: "📌 Exam Tip:" relevant to Gujarat gov exams
 - For Maths/Reasoning, show step-by-step solution`,
-          },
-          ...contextMessages,
-          { role: "user", content: question },
-        ],
-      }),
-    });
+            },
+            ...contextMessages,
+            { role: "user", content: question },
+          ],
+        }),
+      });
+    } catch (fetchError) {
+      return Response.json({ answer: getDoubtSolverFallbackMessage(fetchError?.message || 'fetch failed') }, { status: 200 });
+    }
 
-    const data = await res.json();
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (parseError) {
+      return Response.json({ answer: getDoubtSolverFallbackMessage(parseError?.message || 'invalid json') }, { status: 200 });
+    }
 
     if (!res.ok) {
-      return Response.json({ error: data.error?.message || "GROQ API error" }, { status: 500 });
+      const errorMessage = data.error?.message || data.message || 'GROQ API error';
+      return Response.json({ answer: getDoubtSolverFallbackMessage(errorMessage) }, { status: 200 });
     }
 
     const answer = data.choices?.[0]?.message?.content || "No response generated.";
     return Response.json({ answer });
 
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ answer: getDoubtSolverFallbackMessage(error?.message || 'unknown error') }, { status: 200 });
   }
 }

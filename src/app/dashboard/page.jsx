@@ -35,7 +35,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const h = new Date().getHours();
-    if (h < 12) setTimeOfDay('Morning');
+   if (h < 12) setTimeOfDay('Morning');
     else if (h < 17) setTimeOfDay('Afternoon');
     else setTimeOfDay('Evening');
     supabase.auth.getUser().then(({ data }) => {
@@ -101,11 +101,10 @@ export default function DashboardPage() {
   const pct = targets.length ? Math.round((doneCnt / targets.length) * 100) : 0;
 
   const quickActions = [
-    { icon: '\u{1F9E0}', label: 'Generate Quiz', sub: 'AI-powered MCQs', color: '#6366f1', href: '/quiz' },
+    { icon: '\u{1F9E0}', label: 'Practice Quiz', sub: 'Subject-wise MCQs', color: '#6366f1', href: '/quiz' },
     { icon: '\u{1F916}', label: 'AI Doubt', sub: 'Instant answers', color: '#8b5cf6', href: '/doubt-solver' },
     { icon: '\u{1F4DA}', label: 'Flashcards', sub: 'Study & Review', color: '#14b8a6', href: '/flashcards' },
     { icon: '\u{1F4F0}', label: "Today's News", sub: 'Current Affairs', color: '#f59e0b', href: '/current-affairs' },
-    { icon: '\u{1F4F7}', label: 'AI Quiz', sub: 'Photo/PDF thi', color: '#ec4899', href: '/ai-quiz' },
     { icon: '\u{1F3C6}', label: 'Badges', sub: 'Tara achievements', color: '#f97316', href: '/badges' },
     { icon: '\u{1F3C5}', label: 'Leaderboard', sub: 'Top rankers', color: '#10b981', href: '/leaderboard' },
     { icon: '\u{1F516}', label: 'Bookmarks', sub: 'Saved questions', color: '#3b82f6', href: '/bookmarks' },

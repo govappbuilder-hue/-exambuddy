@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdminSession } from '../../../lib/admin-auth.mjs';
+import { validateSubject } from '../../../lib/input-validation.mjs';
 
 // Service Role Key vaapriye — bulk insert mate
 const supabaseAdmin = createClient(
@@ -10,9 +12,12 @@ const supabaseAdmin = createClient(
 export async function POST(request) {
   try {
     const { questions, adminToken } = await request.json();
+    const headerToken = request.headers.get('x-admin-session');
+    const cookie = request.headers.get('cookie') || '';
+    const cookieToken = cookie.split(';').map(part => part.trim()).find(part => part.startsWith('admin_session='))?.split('=')[1];
+    const effectiveToken = adminToken || headerToken || cookieToken;
 
-    // Basic admin check
-    if (adminToken !== process.env.ADMIN_SECRET_TOKEN) {
+    if (!verifyAdminSession(effectiveToken)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -43,9 +48,14 @@ export async function POST(request) {
 
     const optMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3 };
 
-    const formatted = questions.map(item => ({
-      subject: subjectMap[item.subject] || item.subject?.toLowerCase() || 'gk',
-      question: item.question || item.question_text,
+    const formatted = questions.map(item => {
+      const rawSubject = item.subject;
+      const mappedSubject = subjectMap[rawSubject] || (typeof rawSubject === 'string' ? rawSubject.toLowerCase() : '');
+      const subject = validateSubject(mappedSubject) ? mappedSubject : 'gk';
+
+      return {
+        subject,
+        question: item.question || item.question_text,
       option_a: item.a || item.option_a,
       option_b: item.b || item.option_b,
       option_c: item.c || item.option_c,
@@ -53,9 +63,10 @@ export async function POST(request) {
       correct_answer: typeof item.correct_option === 'string' && item.correct_option.length === 1
         ? item.correct_option.toUpperCase()
         : ['A','B','C','D'][item.correct_option] || 'A',
-      explanation: item.explanation || '',
-      exam_tag: item.exam_tag || '',
-    }));
+        explanation: item.explanation || '',
+        exam_tag: item.exam_tag || '',
+      };
+    });
 
     const chunkSize = 200;
     let totalInserted = 0;

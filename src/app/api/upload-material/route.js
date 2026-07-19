@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { verifyAdminSession } from '../../../lib/admin-auth.mjs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -7,6 +8,15 @@ const supabase = createClient(
 
 export async function POST(request) {
   try {
+    const headerToken = request.headers.get('x-admin-session');
+    const cookie = request.headers.get('cookie') || '';
+    const cookieToken = cookie.split(';').map(part => part.trim()).find(part => part.startsWith('admin_session='))?.split('=')[1];
+    const effectiveToken = headerToken || cookieToken;
+
+    if (!verifyAdminSession(effectiveToken)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
     const title = formData.get("title");

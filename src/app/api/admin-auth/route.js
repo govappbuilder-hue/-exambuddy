@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { signAdminSession } from '../../../lib/admin-auth.mjs';
 
 export async function POST(request) {
   try {
@@ -18,10 +19,21 @@ export async function POST(request) {
 
     // પાસવર્ડ મેચિંગ (બંને બાજુથી સ્પેસ હટાવીને ચેક કરશે)
     if (password?.trim() === correctPassword.trim()) {
-      return NextResponse.json({ 
-        success: true, 
-        token: "exambuddy_secure_admin_session_2026" 
+      const token = signAdminSession();
+      const response = NextResponse.json({
+        success: true,
+        token,
       });
+      response.cookies.set({
+        name: 'admin_session',
+        value: token,
+        httpOnly: true,
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 8,
+      });
+      return response;
     }
 
     // જો પાસવર્ડ ખોટો હોય તો

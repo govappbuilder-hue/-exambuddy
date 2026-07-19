@@ -112,10 +112,11 @@ export default function DoubtSolverPage() {
       if (data.error === "PREMIUM_REQUIRED") {
         setMessages(prev => [...prev, { role: "assistant", text: "?? ? feature Premium users ???? ??. Premium ?? ??? unlimited doubts ????!", isLimit: true }]);
       } else {
-        setMessages(prev => [...prev, { role: "assistant", text: data.answer || "Error aayo, try karo." }]);
+        const message = data.answer || 'માફ કરશો! હમણાં જવાબ મેળવવામાં નિષ્ફલ ગયુ. થોડીવાર પછી ફરી પ્રયાસ કરો.';
+        setMessages(prev => [...prev, { role: "assistant", text: message }]);
       }
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', text: '❌ Network error. Internet check karo.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: 'માફ કરશો! હમણાં જવાબ મેળવવામાં નિષ્ફલ ગયુ. થોડીવાર પછી ફરી પ્રયાસ કરો.' }]);
     }
     setLoading(false);
   };
